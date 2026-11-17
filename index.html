@@ -9,19 +9,28 @@
 :root{color-scheme:dark;--bg:#0b101b;--panel:#141d2c;--panel2:#192438;--line:#2c3b50;--ink:#e8eaf0;--muted:#99a8bb;--gold:#e3b96b;--aqua:#71dbcd;--red:#ef8582;--purple:#ab95f5;--green:#81d6a0}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse 85% 520px at 50% -200px,#253550,transparent),var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;color:var(--ink);min-height:100dvh}button,input,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.42;cursor:not-allowed}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--aqua);outline-offset:2px}.shell{width:min(100%,1050px);margin:auto;padding:22px 17px 110px}.mast{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:0 0 18px}.eyebrow{font-size:10px;letter-spacing:.26em;color:var(--gold);font-weight:800}.brand{font-family:Georgia,"Yu Mincho",serif;font-size:clamp(27px,5.8vw,42px);font-weight:700;letter-spacing:.08em;line-height:1.3;margin:3px 0}.subtitle{font-size:12px;color:var(--muted)}.counter{display:flex;flex-direction:column;align-items:flex-end;text-align:right;gap:6px}.chip{border:1px solid #64718a88;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:700;color:#c0d4e7;white-space:nowrap}.coin{color:var(--gold);font-size:14px;font-weight:750;font-variant-numeric:tabular-nums}.hero{position:relative;background:linear-gradient(140deg,#1c2b40 0%,#131d2d 62%,#182033 100%);border:1px solid #3b4c62;border-radius:20px;padding:21px;overflow:hidden;box-shadow:0 18px 52px #0509145e}.hero:before{content:"✦";position:absolute;font-size:150px;color:#84dfed0c;right:-4px;top:-55px;pointer-events:none}.herohead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;position:relative}.job{font-size:11px;color:var(--aqua);font-weight:800;letter-spacing:.08em}.hero h2{font-size:23px;margin:4px 0;font-weight:750}.level{background:#2b3151;color:#c8bbff;border:1px solid #4c4f77;border-radius:12px;padding:8px 12px;font-size:21px;font-weight:800;white-space:nowrap}.level small{font-size:10px;font-weight:600;display:block;color:#aea9dd}.bars{display:grid;gap:14px;margin:22px 0 17px}.barline{display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px}.barline strong{font-size:13px;font-variant-numeric:tabular-nums}.track{height:10px;border-radius:10px;background:#0a1322;overflow:hidden;border:1px solid #3c4c5b}.fill{height:100%;border-radius:9px;transition:width .3s ease}.fill.hp{background:linear-gradient(90deg,#52ab83,#89e1b0)}.fill.hp.low{background:linear-gradient(90deg,#c15e67,#f0a16e)}.fill.xp{background:linear-gradient(90deg,#716de2,#b49cf2)}.fill.jobxp{background:linear-gradient(90deg,#cc8a43,#f4cf83)}.jobcards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.jobcard{border:1px solid #3a4d65;border-radius:13px;background:#111e2c;padding:14px;display:flex;flex-direction:column;gap:9px}.jobcard.active{border-color:#e1b86a;background:#292a2d}.jobcard h3{margin:0;font-size:17px}.jobcard p{font-size:12px;line-height:1.7;color:#b3c0cc;margin:0;flex:1}@media(max-width:600px){.jobcards{grid-template-columns:1fr}}.statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.stat{border:1px solid #3a4960;background:#09142277;border-radius:11px;padding:12px 8px;text-align:center}.stat span{font-size:10px;color:var(--muted);display:block;margin-bottom:6px}.stat strong{font-size:20px;font-variant-numeric:tabular-nums}.statgrid.six{grid-template-columns:repeat(3,1fr)}.nav{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;position:sticky;top:0;z-index:10;background:#0b101bf0;padding:12px 0 9px;backdrop-filter:blur(15px)}.nav button{font-size:12px;border:1px solid var(--line);background:#131e2a;color:#aebdd0;border-radius:11px;padding:12px 5px;font-size:13px;font-weight:800}.nav button.active{color:#17222b;background:var(--aqua);border-color:var(--aqua)}.page{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;min-width:0}.panel{min-width:0;max-width:100%;background:linear-gradient(145deg,#172233,#111b29);border:1px solid var(--line);border-radius:17px;padding:18px}.sectiontop{display:flex;align-items:center;justify-content:space-between;gap:10px}.kicker{color:var(--gold);text-transform:uppercase;letter-spacing:.18em;font-size:10px;font-weight:800}.sectiontitle{font-size:20px;margin:5px 0 12px}.muted{color:var(--muted)}.small{font-size:12px}.tiny{font-size:11px}.intro{line-height:1.85;font-size:13px;color:#b4c2d1}.floorselect{display:flex;gap:7px;overflow:auto;padding:2px 0 8px;scrollbar-width:thin}.floorbtn{min-width:94px;flex:1;border:1px solid #3a4b63;border-radius:11px;padding:11px 9px;background:#192538;color:#b6c4d7;text-align:left}.floorbtn b{display:block;font-size:16px}.floorbtn small{display:block;color:var(--muted);margin-top:4px;font-size:10px}.floorbtn.active{background:#2e3b52;border-color:var(--gold);color:var(--gold)}.floorbtn.locked{opacity:.42}.enemylist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:13px 0}.enemy{border:1px solid #314157;background:#101c2a;border-radius:10px;padding:10px}.enemy strong{font-size:13px;display:block}.enemy small{font-size:10px;color:#9aabba;line-height:1.8}.split{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.info{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.pill{background:#28364a;color:#b8c7da;font-size:11px;font-weight:700;padding:6px 9px;border-radius:999px}.pill.gold{background:#55462b;color:#f6cd83}.pill.blue{background:#263e51;color:#81d4e8}.pill.good{background:#24493e;color:#8ae1b5}.buttonrow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#213149;border:1px solid #3e5169;border-radius:11px;color:#e3ebf4;padding:12px 14px;font-size:13px;font-weight:800;min-height:44px;transition:background .14s}.btn:hover:not(:disabled){background:#304361}.btn.primary{background:linear-gradient(120deg,#b5e7d4,#77cfc6);color:#132b32;border-color:#99dfd1}.btn.gold{background:linear-gradient(120deg,#e6ca91,#d8ab59);color:#35270d;border-color:#eed095}.btn.danger{color:#f3a6a6;border-color:#75434b;background:#40222b}.btn.ghost{background:transparent}.controls{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0}.controlgroup{display:flex;gap:7px;align-items:center}.input{height:37px;width:75px;border:1px solid #43536a;border-radius:9px;padding:6px 10px;background:#0b1627;color:#edf2fc}.controlnote{font-size:11px;color:var(--muted)}.result{border:1px solid #51667b;background:linear-gradient(130deg,#1a3040,#161e2e);border-radius:14px;padding:15px}.result h3{margin:4px 0 12px;font-size:19px}.resultgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.metric{background:#101b2ccc;border-radius:9px;padding:12px;text-align:center}.metric b{display:block;font-size:19px;color:var(--aqua)}.metric small{display:block;font-size:10px;color:#a7b8c9;margin-top:3px}.lootnames{line-height:1.8;font-size:12px}.lootnames span{display:inline-block;margin-right:8px}.geargrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.gear{border:1px solid #36495e;background:#111c2b;border-radius:12px;padding:13px;min-width:0}.gear .slot{font-size:10px;color:var(--muted);letter-spacing:.04em}.gear .name{font-size:13px;font-weight:800;margin:6px 0;min-height:19px;overflow-wrap:anywhere}.gear .affix{font-size:11px;color:#aebccc;line-height:1.65}.r-common{color:#dce4ee}.r-uncommon{color:#85d6f4}.r-rare{color:#eac079}.r-epic{color:#c6a2fa}.r-legendary{color:#ff9995;text-shadow:0 0 12px #cf5e5d80}.filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0 13px}.filters select{max-width:190px;min-width:120px;background:#0d1829;color:#e2e8f0;border:1px solid #3e5065;padding:9px;border-radius:9px}.itemlist{display:grid;gap:9px}.item{border:1px solid #3b4c60;border-radius:13px;background:#111d2b;padding:12px 13px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px}.item.equipped{border-color:#467c78;background:#152f34}.item h3{font-size:14px;margin:2px 0 6px;overflow-wrap:anywhere}.item .meta{font-size:10px;color:var(--muted);margin-bottom:4px}.item .spec{font-size:12px;color:#bed0dc;line-height:1.7}.itemactions{display:flex;flex-direction:column;gap:6px;min-width:65px}.itemactions button{font-size:11px;padding:8px}.tag{border:1px solid #43766f;color:#8ce9d0;background:#184138;border-radius:5px;padding:3px 5px;font-size:9px;font-weight:800;white-space:nowrap}.textline{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.divider{border:0;border-top:1px solid #334357;margin:16px 0}.shopnav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.shopnav button{min-width:0;padding:11px 5px;font-size:12px}.towncards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.towncard{padding:15px;border:1px solid #384960;border-radius:12px;background:#111d2b}.towncard h3{margin:0 0 8px;font-size:17px}.towncard p{font-size:12px;line-height:1.7;color:#a6b9c9;min-height:48px}.forgeitems{display:grid;gap:8px}.forgerow{display:flex;justify-content:space-between;gap:8px;align-items:center;background:#102030;border:1px solid #34495c;padding:9px 12px;border-radius:9px}.forgerow div{font-size:12px}.forgerow small{font-size:10px;color:var(--muted);display:block;line-height:1.6}.log{border-left:2px solid #52697e;padding:3px 0 8px 13px;margin:0 0 9px}.log strong{font-size:12px}.log .date{font-size:10px;color:var(--muted)}.log p{margin:5px 0;font-size:12px;line-height:1.7;color:#c1d0dd}.notice{border:1px solid #5c5544;background:#4036265c;padding:12px;border-radius:11px;color:#e6cf9e;font-size:12px;line-height:1.8}.error{color:var(--red)}.ok{color:var(--green)}.hint{font-size:11px;color:var(--muted);line-height:1.7}.foot{text-align:center;color:#7a8da1;font-size:10px;margin:26px 0}.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);max-width:calc(100vw - 32px);width:max-content;background:#d7ebec;color:#152c33;border-radius:12px;padding:12px 18px;box-shadow:0 14px 60px #0009;z-index:100;font-size:13px;font-weight:800;opacity:0;pointer-events:none;transition:opacity .25s}.toast.show{opacity:1}.empty{padding:22px;text-align:center;color:var(--muted);font-size:12px}.progressline{height:7px;border-radius:10px;background:#0e1929;margin:9px 0;overflow:hidden}.progressline span{height:100%;display:block;background:var(--gold)}@media(max-width:600px){.shell{padding:14px 12px 100px}.hero{padding:16px}.panel{padding:14px}.brand{font-size:28px}.statgrid{gap:5px}.stat{padding:10px 3px}.stat strong{font-size:17px}.enemylist{gap:6px}.buttonrow{grid-template-columns:repeat(2,1fr)}.towncards{grid-template-columns:1fr}.towncard p{min-height:0}.resultgrid{gap:4px}.metric{padding:9px 4px}.metric b{font-size:17px}.item{gap:6px}.itemactions{min-width:60px}.level{font-size:19px}.nav{padding-top:8px}.nav button{padding:10px 2px;font-size:11px}}@media(min-width:800px){.layout{display:grid;grid-template-columns:1fr 1fr;gap:16px}.layout .wide{grid-column:1/-1}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
 .skilldetails{margin-top:3px;border-top:1px solid #34465b;padding-top:7px}.skilldetails summary{cursor:pointer;color:#d3c0ed;font-size:12px;font-weight:700;line-height:1.6}.skilllist{display:grid;gap:6px;margin-top:10px}.skillentry{border:1px solid #3e4d63;border-radius:9px;background:#1c2b39;padding:9px;display:grid;gap:4px}.skillentry.locked{opacity:.52}.skillentry .split{gap:6px;flex-wrap:wrap}.skillentry .split strong{font-size:12px}.skillentry .pill{font-size:9px}.skillentry .small{font-size:11px}
+.island-gate{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0;padding:15px;border:1px solid #89744c;background:linear-gradient(110deg,#403525,#1c2635);border-radius:13px}.island-gate strong{color:#efd59d}.island-gate p{margin:5px 0}.casino-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.casino-nav button{padding:12px 4px;font-size:12px}.casino-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.casino-grid .wide{grid-column:1/-1}.casino-balance{border:1px solid #8d713d;border-radius:13px;padding:13px;background:#342b1b;text-align:center}.casino-balance strong{font-size:28px;display:block;color:#f7cd77}.casino-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0}.casino-controls select,.casino-controls input{background:#0d1829;color:#e4edf8;border:1px solid #53647a;border-radius:8px;padding:10px;min-height:44px}.casino-controls input{width:90px}.poker-cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:13px 0}.poker-card{border:2px solid #4b6380;background:#e5edec;color:#263140;border-radius:10px;min-height:78px;padding:8px 2px;font-size:20px;font-weight:900;text-align:center}.poker-card.held{border-color:#e8c071;background:#fff4cf}.poker-card small{display:block;font-size:9px;margin-top:4px;color:#42566c}.poker-card.red{color:#b63744}.casino-message{padding:13px;background:#152f35;border:1px solid #37515f;border-radius:11px;line-height:1.75;font-size:13px}.prize-item{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid #5c4f40;border-radius:12px;padding:13px;background:#241f2b;margin-top:9px}.prize-item strong{color:#f5cf88}.prize-item p{font-size:11px;color:#afbfce;margin:7px 0}.prize-item button{flex-shrink:0}@media(max-width:600px){.casino-grid{grid-template-columns:1fr}.casino-grid .wide{grid-column:auto}.casino-nav button{font-size:10px;padding:11px 1px}.poker-card{min-height:70px;font-size:18px}.island-gate .btn{width:100%}.prize-item{flex-wrap:wrap}.prize-item button{width:100%}}
 </style>
 </head>
 <body>
-<main class="shell"><header class="mast"><div><div class="eyebrow">INFINITE ABYSS // PROTOTYPE 0.5</div><h1 class="brand">無限迷宮アビス</h1><div class="subtitle">強くなる理由など、強くなってから考えればいい。</div></div><div class="counter"><span class="chip" id="locationBadge">第1層</span><span class="coin" id="goldBadge">100 G</span></div></header><section class="hero" id="hero"></section><nav class="nav" aria-label="画面切り替え"><button data-tab="explore" class="active">⚔ 探索</button><button data-tab="gear">◇ 装備</button><button data-tab="town">⌂ 拠点</button><button data-tab="jobs">♜ ジョブ</button><button data-tab="record">≡ 記録</button></nav><div id="view" class="page" aria-live="polite"></div><footer class="foot">INSPIRED BY CLASSIC BROWSER RPGS · OFFLINE SINGLE-FILE GAME</footer></main><div class="toast" id="toast" role="status" aria-live="polite"></div><input id="importFile" type="file" accept="application/json,.json" hidden>
+<main class="shell"><header class="mast"><div><div class="eyebrow">INFINITE ABYSS // PROTOTYPE 0.6</div><h1 class="brand">無限迷宮アビス</h1><div class="subtitle">強くなる理由など、強くなってから考えればいい。</div></div><div class="counter"><span class="chip" id="locationBadge">第1層</span><span class="coin" id="goldBadge">100 G</span></div></header><section class="hero" id="hero"></section><nav class="nav" aria-label="画面切り替え"><button data-tab="explore" class="active">⚔ 探索</button><button data-tab="gear">◇ 装備</button><button data-tab="town">⌂ 拠点</button><button data-tab="jobs">♜ ジョブ</button><button data-tab="record">≡ 記録</button></nav><div id="view" class="page" aria-live="polite"></div><footer class="foot">INSPIRED BY CLASSIC BROWSER RPGS · OFFLINE SINGLE-FILE GAME</footer></main><div class="toast" id="toast" role="status" aria-live="polite"></div><input id="importFile" type="file" accept="application/json,.json" hidden>
 <script>
 'use strict';
 (()=>{
-// Infinite Abyss v0.5 — six primary attributes. Rules are prototypes until balanced.
+// Infinite Abyss v0.6 — permanent job-based stat growth and Casino Island.
 const KEY='infinite-abyss-save-v5';
 const OLD_KEYS=['infinite-abyss-save-v1','infinite-abyss-save-v2','infinite-abyss-save-v3','infinite-abyss-save-v4'];
 const VERSION=5, JOB_CAP=60, MAX_LEVEL=10000;
 const attrs=['str','mag','vit','dex','agi','luk'];
 const attrLabels={str:'力',mag:'魔力',vit:'生命力',dex:'器用さ',agi:'素早さ',luk:'運'};
+// Permanent stat gain happens at the exact level-up, using the currently equipped job.
+// Integer parts are guaranteed, fractional parts are independent extra +1 rolls.
+const levelGrowth={
+ fighter:{str:2,mag:.10,vit:1,dex:.55,agi:.35,luk:.20},
+ mage:{str:.10,mag:2,vit:.65,dex:.65,agi:.40,luk:.25},
+ healer:{str:.20,mag:1,vit:1,dex:.55,agi:.45,luk:.35},
+ thief:{str:1,mag:.10,vit:.55,dex:1,agi:1,luk:.40}
+};
 const jobs={
  fighter:{name:'ファイター',eng:'FIGHTER',mode:'physical',base:[13,5,12,9,7,7],growth:[.85,.25,.85,.55,.4,.3],desc:'力と生命力を中心に成長する近接型。',passive:'今は固有パッシブなし（調整予定）'},
  mage:{name:'魔術師',eng:'MAGE',mode:'magic',base:[5,14,7,9,8,8],growth:[.25,1,.5,.6,.5,.35],desc:'魔力で攻撃する術師。',passive:'魔力暴走：攻撃命中時、運に応じた確率でダメージ2.5倍'},
@@ -89,6 +98,13 @@ const shopCatalog=jobKeys.flatMap((job,j)=>shopTemplates.map(t=>{
  const mods=[0,5,-5,10];
  return {sku:job+'-'+t.sku,job,name:t.names[j],slot:t.slot,shop:t.shop,floor:t.floor,level:t.level,price:t.price+mods[j],stat};
 }));
+// All casino prices are medals. They have no cash value, purchase channel or cash-out.
+const GOLD_PER_MEDAL=10;
+const horseRoster=[{name:'暁の疾風',weight:40,payout:2},{name:'銀嶺の雫',weight:30,payout:3},{name:'黒曜の牙',weight:20,payout:5},{name:'月影の流星',weight:10,payout:9}];
+const casinoPrizes=[
+ ...jobKeys.map(j=>({sku:'relic-'+j,kind:'weapon',job:j,name:({fighter:'王断の大剣',mage:'星詠みの大杖',healer:'天啓の聖杖',thief:'幽影の短剣'})[j],cost:2000,stat:({fighter:{str:48,vit:10,dex:7},mage:{mag:48,vit:10,luk:7},healer:{mag:48,vit:12,luk:5},thief:{str:48,agi:11,dex:7}})[j]})),
+ {sku:'rust-origin',kind:'material',name:'錆びた始原剣',cost:500,description:'将来の最強武器合成の土台。素材収集・合成機能は未実装。現時点では装備不可。'}
+];
 const blankSlots=()=>Object.fromEntries(slots.map(s=>[s,null]));
 const freshJobs=()=>Object.fromEntries(jobKeys.map(j=>[j,{level:1,xp:0}]));
 const $=s=>document.querySelector(s);
@@ -98,24 +114,34 @@ const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 const primaryLabel=k=>attrLabels[k];
 const statLine=stat=>attrs.filter(k=>stat?.[k]).map(k=>`${primaryLabel(k)} +${stat[k]}`).join(' / ')||'補正なし';
 const expNeed=l=>{const v=[0,25,40,60,85,115,145,175,220,265];return v[l]??(265+50*(l-9)+5*Math.max(0,l-9)*(l-10)/2);};
-function createState(){return {version:VERSION,activeJob:'mage',level:1,xp:0,hpGrowth:0,hp:78,gold:100,ore:0,floor:1,unlocked:1,
+function createState(){return {version:VERSION,activeJob:'mage',level:1,xp:0,hpGrowth:0,hp:78,gold:100,medals:0,baseStats:Object.fromEntries(attrs.map((key,i)=>[key,jobs.mage.base[i]])),casino:makeCasino(),location:'main',ore:0,floor:1,unlocked:1,
  kills:{1:0,2:0,3:0,4:0,5:0},wins:0,deaths:0,battleCount:0,bossDefeated:false,
  rng:0xAB155005,nextId:1,jobProgress:freshJobs(),loadouts:Object.fromEntries(jobKeys.map(j=>[j,blankSlots()])),inventory:[],equipped:blankSlots(),
- history:[{id:0,headline:'新しい冒険',body:'v0.5で旧セーブを初期化。6能力値と各ジョブ5商品から再スタート。',at:'冒険開始'}]};}
+ history:[{id:0,headline:'新しい冒険',body:'6能力値・職業育成・カジノ島へようこそ。',at:'冒険開始'}]};}
+function makeCasino(){return {poker:null,last:'',plays:0,purchased:[],materials:[]};}
+function upgradeState(s){if(!s||s.version!==VERSION||!jobs[s.activeJob])return s;
+ if(!s.baseStats)s.baseStats=jobAttributes(s.activeJob,s.level); // retain v0.5's current stat progression
+ if(!Number.isFinite(s.medals))s.medals=0;
+ if(!s.casino)s.casino=makeCasino();
+ if(!Array.isArray(s.casino.purchased))s.casino.purchased=[];
+ if(!Array.isArray(s.casino.materials))s.casino.materials=[];
+ if(!['main','casino'].includes(s.location))s.location='main';
+ return s;
+}
 function valid(s){return s?.version===VERSION&&jobs[s.activeJob]&&Number.isInteger(s.level)&&s.level>0&&Array.isArray(s.inventory)&&s.jobProgress&&s.loadouts&&s.equipped&&slots.every(k=>Object.hasOwn(s.equipped,k))&&Number.isFinite(s.rng);}
 function readState(){
  try{for(const old of OLD_KEYS)localStorage.removeItem(old);}catch(e){console.warn('old save cleanup unavailable',e);}
- try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(valid(s))return s;}catch(e){console.warn('save load failed',e);}
+ try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(valid(upgradeState(s)))return s;}catch(e){console.warn('save load failed',e);}
  return createState();
 }
-let state=readState();let tab='explore',townSection='weapon',lastResult=null,gearFilter='all';
+let state=readState();let tab=state.location==='casino'?'casino':'explore',townSection='weapon',lastResult=null,gearFilter='all';
 function save(){try{state.loadouts[state.activeJob]={...state.equipped};localStorage.setItem(KEY,JSON.stringify(state));}catch(e){console.warn('save failed',e);toast('保存に失敗。記録からJSONを出力してください。');}}
 function rand(){let x=state.rng>>>0||0x12345678;x^=x<<13;x^=x>>>17;x^=x<<5;state.rng=x>>>0;return state.rng/4294967296;}
 function ri(a,b){return a+Math.floor(rand()*(b-a+1));}
 function randPick(arr){return arr[ri(0,arr.length-1)];}
 function jobAttributes(job,level){const j=jobs[job];return Object.fromEntries(attrs.map((k,i)=>[k,j.base[i]+Math.floor((level-1)*j.growth[i])]));}
 function derived(){
- const d=jobAttributes(state.activeJob,state.level);
+ const d={...state.baseStats};
  for(const slot of slots){const i=state.inventory.find(i=>i.id===state.equipped[slot]&&i.job===state.activeJob);if(!i)continue;
   for(const key of attrs)d[key]+=(i.stat[key]||0);
   if(i.enhance){const target=i.slot==='weapon'?(jobs[state.activeJob].mode==='magic'?'mag':'str'):'vit';d[target]+=i.enhance;}
@@ -135,6 +161,8 @@ function gainExperience(amount){state.xp+=amount;let lv=0,jlv=0;
  while(state.level<MAX_LEVEL&&state.xp>=expNeed(state.level)){
   const oldHP=derived().maxHP;
   state.xp-=expNeed(state.level);state.level++;
+  const currentGrowth=levelGrowth[state.activeJob];
+  for(const a of attrs){const n=currentGrowth[a],fixed=Math.floor(n);state.baseStats[a]+=fixed+(rand()<n-fixed?1:0);}
   const vit=derived().vit;
   state.hpGrowth+=4+Math.floor(vit/2);
   state.hp=Math.min(derived().maxHP,state.hp+(derived().maxHP-oldHP));lv++;
@@ -216,6 +244,7 @@ function equip(id){const item=state.inventory.find(x=>x.id===id&&x.job===state.a
  state.hp=clamp(state.hp+Math.max(0,after-before),1,after);save();render();toast(item.name+' を装備した');
 }
 function sell(id){const item=state.inventory.find(x=>x.id===id);if(!item)return;
+ if(item.casinoSku){toast('カジノの限定景品は売却できません');return;}
  if(jobKeys.some(j=>Object.values(state.loadouts[j]).includes(id))||Object.values(state.equipped).includes(id)){toast('装備中は売れません');return;}
  const price=Math.floor(item.price*.35)+(item.enhance||0)*15;
  if(!confirm(item.name+' を'+price+'Gで売却しますか？'))return;
@@ -248,7 +277,7 @@ function renderHero(){const d=derived(),p=state.jobProgress[state.activeJob],max
  <div><div class="barline"><span>ジョブEXP</span><strong>${p.level>=JOB_CAP?'MAX':num(p.xp)+' / '+num(expNeed(p.level))}</strong></div><div class="track"><div class="fill jobxp" style="width:${p.level>=JOB_CAP?100:clamp(p.xp/expNeed(p.level)*100,0,100)}%"></div></div></div></div>
  <div class="statgrid six">${attrs.map(a=>`<div class="stat"><span>${attrLabels[a]}</span><strong>${num(d[a])}</strong></div>`).join('')}</div>
  <div class="hint" style="margin-top:14px">命中 ${accuracy(d.dex,8,d.luk,8).toFixed(1)}% / 回避 ${ (100-accuracy(8,d.agi,8,d.luk)).toFixed(1)}%（基準値8の相手） · 1ターン ${actionsPerTurn(d.agi)}回行動</div>`;
- $('#locationBadge').textContent='第'+state.floor+'層';$('#goldBadge').textContent=num(state.gold)+' G';
+ $('#locationBadge').textContent=state.location==='casino'?'カジノ島':'第'+state.floor+'層';$('#goldBadge').textContent=num(state.gold)+' G'+(state.location==='casino'?' / '+num(state.medals)+' M':'');
 }
 function resultHTML(){if(!lastResult)return '';
  const r=lastResult;return `<section class="result" id="lastResult"><div class="kicker">AUTO BATTLE RESULTS</div><h3>${esc(r.reason)}</h3><div class="resultgrid">${[
@@ -280,19 +309,191 @@ function shopHTML(kind){const offers=shopCatalog.filter(i=>i.job===state.activeJ
 function servicesHTML(){const d=derived();const forge=state.inventory.filter(i=>i.job===state.activeJob&&state.equipped[i.slot]===i.id).map(i=>{const n=i.enhance||0,cost=70*(n+1),ore=n>0?n:0;return `<div class="forgerow"><div><strong>${i.name} +${n}</strong><small>${statLine(i.stat)} / 強化${n>=5?'上限':cost+'G + 鉱石'+ore}</small></div><button class="btn" data-forge="${i.id}" ${n>=5||state.gold<cost||state.ore<ore?'disabled':''}>強化</button></div>`;}).join('');
  return `<section class="panel"><div class="kicker">THE CAMP</div><h2 class="sectiontitle">宿屋・鍛冶屋</h2><div class="towncards"><div class="towncard"><h3>宿屋</h3><p>20GでHP全回復して第1層に戻る。</p><button class="btn primary" data-action="inn" ${state.hp>=d.maxHP||state.gold<20?'disabled':''}>HP全回復 20G</button></div><div class="towncard"><h3>鍛冶屋</h3><p>装備強化+5まで。武器は力／魔力、防具は生命力が増える。試作仕様。</p><span class="small">鉱石：${num(state.ore)}</span></div></div><hr class="divider"><div class="forgeitems">${forge||'<div class="empty">強化できる装備がない</div>'}</div></section>`;
 }
-function townHTML(){return `<section class="panel"><h2 class="sectiontitle">拠点の施設</h2><div class="shopnav">${[['weapon','武器屋'],['armor','防具屋'],['services','宿屋・鍛冶屋']].map(([k,n])=>`<button class="btn ${townSection===k?'primary':''}" data-town="${k}">${n}</button>`).join('')}</div></section>${townSection==='services'?servicesHTML():shopHTML(townSection)}`;}
+function townHTML(){return `<section class="panel"><h2 class="sectiontitle">拠点の施設</h2><div class="island-gate"><div><strong>⛵ カジノ島への航路</strong><p class="small muted">ゴールドをメダルに換えて遊ぶ娯楽の島。景品交換所には強力な武器も。</p></div><button class="btn gold" data-travel="casino">カジノ島へ渡る</button></div><div class="shopnav">${[['weapon','武器屋'],['armor','防具屋'],['services','宿屋・鍛冶屋']].map(([k,n])=>`<button class="btn ${townSection===k?'primary':''}" data-town="${k}">${n}</button>`).join('')}</div></section>${townSection==='services'?servicesHTML():shopHTML(townSection)}`;}
 function jobsHTML(){const cards=jobKeys.map(j=>{const p=state.jobProgress[j],selected=j===state.activeJob;return `<div class="jobcard ${selected?'active':''}"><div class="split"><h3>${jobs[j].name}</h3><span class="pill ${selected?'gold':''}">${selected?'現在のジョブ':'Lv.'+p.level}</span></div><p>${jobs[j].desc}</p><div class="small">ジョブLv ${p.level}/${JOB_CAP} · ${p.level===JOB_CAP?'MAX':'次まで '+num(expNeed(p.level)-p.xp)+' EXP'}</div><div class="progressline"><span style="width:${p.level===JOB_CAP?100:p.xp/expNeed(p.level)*100}%"></span></div><button class="btn ${selected?'':'primary'}" data-job="${j}" ${selected?'disabled':''}>${selected?'選択中':'転職する'}</button><div class="small muted">${jobs[j].passive}</div><details class="skilldetails" ${selected?'open':''}><summary>スキル ${skills[j].filter(s=>s.level<=p.level).length}/5習得</summary><div class="skilllist">${skills[j].map(s=>`<div class="skillentry ${p.level<s.level?'locked':''}"><div class="split"><strong>${s.name}</strong><span class="pill">ジョブLv.${s.level}</span></div><div class="small">威力×${s.power.toFixed(2)} / 基礎発動率${s.rate}%</div><div class="tiny muted">${effectText(s.effect)}</div></div>`).join('')}</div></details></div>`;}).join('');
  return `<section class="panel"><div class="kicker">ADVENTURER GUILD</div><h2 class="sectiontitle">ジョブ・転職</h2><p class="intro">総合Lvは共通。経験値を10獲得したら、総合EXPと現在のジョブEXPに10ずつ加算。ジョブLv60以降はジョブ側のみ切り捨て。スキルは5/15/30/45/60で解放、MPなし。</p><div class="jobcards">${cards}</div><p class="hint">転職時は総合Lvを維持し、HP割合を引き継ぐ。ジョブごとに装備は別管理。武器屋と防具屋も自動で切り替わる。</p></section>`;
 }
 function recordHTML(){return `<section class="panel"><div class="kicker">ADVENTURE JOURNAL</div><h2 class="sectiontitle">冒険記録とセーブ</h2><div class="info"><span class="pill">${num(state.wins)}勝・${state.deaths}敗</span><span class="pill">到達第${state.unlocked}層</span><span class="pill">鉱石${num(state.ore)}</span></div>
- <p class="intro">v0.5で旧セーブは初期化。セーブはこのブラウザ内に保存されます。JSON出力でバックアップ可能。</p><div class="buttonrow"><button class="btn primary" data-action="export">セーブを出力</button><button class="btn" data-action="import">JSONを読込</button><button class="btn danger" data-action="reset">セーブを初期化</button></div>
+ <p class="intro">v0.5のセーブは維持してv0.6に自動拡張。セーブはブラウザ内に保存されます。JSON出力でバックアップ可能。</p><div class="buttonrow"><button class="btn primary" data-action="export">セーブを出力</button><button class="btn" data-action="import">JSONを読込</button><button class="btn danger" data-action="reset">セーブを初期化</button></div>
  <hr class="divider"><h3 class="sectiontitle">現行仕様</h3><div class="notice">6能力値：力（物理攻撃）、魔力（魔法攻撃）、生命力（HP成長）、器用さ（命中）、素早さ（回避・ターン行動回数）、運（命中・回避・スキル発動・魔力暴走・乱数報酬）。HPは派生値、MPなし。ATK・DEF・会心率・会心回復など旧補助ステータスは廃止。装備ドロップなし、職業ごとに固定5商品。数値は仮バランス。</div>
  <hr class="divider"><h3 class="sectiontitle">直近の冒険ログ</h3>${state.history.slice(0,50).map(x=>`<div class="log"><div class="date">${esc(x.at)}</div><strong>${esc(x.headline)}</strong><p>${esc(x.body)}</p></div>`).join('')}</section>`;}
-function render(){renderHero();document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));$('#view').innerHTML=tab==='explore'?exploreHTML():tab==='gear'?gearHTML():tab==='town'?townHTML():tab==='jobs'?jobsHTML():recordHTML();}
-function exportSave(){const blob=new Blob([JSON.stringify({app:'INFINITE_ABYSS',exportedAt:new Date().toISOString(),state},null,2)],{type:'application/json'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='abyss-v05-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast('JSON書き出し完了');}
-function importSave(file){if(!file)return;const rd=new FileReader();rd.onload=()=>{try{const data=JSON.parse(rd.result),s=data.state||data;if(!valid(s))throw Error('v0.5形式のみ対応');if(!confirm('現在のデータを上書きします。続けますか？'))return;state=s;lastResult=null;tab='explore';save();render();toast('データを復元しました');}catch(e){toast('読み込み失敗：'+e.message);}};rd.readAsText(file);}
+// Casino Island is fully offline. Medals are earned only by exchanging in-game gold or games.
+function travel(destination){
+ if(destination==='casino'){
+  if(state.location!=='main'||tab!=='town')return;
+  state.location='casino';tab='casino';
+ }else if(destination==='main'){
+  if(state.location!=='casino')return;
+  state.location='main';tab='town';
+ }else return;
+ logEntry('移動',destination==='casino'?'カジノ島へ渡航':'カジノ島から帰還');save();render();
+}
+function exchangeMedals(m){
+ if(state.location!=='casino'||!Number.isInteger(m)||m<1||m>1000)return;
+ const cost=m*GOLD_PER_MEDAL;
+ if(state.gold<cost){toast('ゴールドが足りません');return;}
+ state.gold-=cost;state.medals+=m;
+ state.casino.last=cost+'G を '+m+'メダルに交換した。';
+ logEntry('メダル交換',cost+'G → '+m+'メダル');save();render();
+}
+function wagerFrom(selector){
+ const value=Number($(selector)?.value);
+ if(!Number.isInteger(value)||value<1||value>500){toast('賭けるメダルは1〜500枚');return null;}
+ if(value>state.medals){toast('メダルが足りません');return null;}
+ return value;
+}
+const pokerSuits=['♠','♥','♦','♣'];
+function cardText(card){return {rank:card%13+2,suit:pokerSuits[Math.floor(card/13)]};}
+function displayCard(card){const c=cardText(card);const r=({11:'J',12:'Q',13:'K',14:'A'})[c.rank]||c.rank;return r+c.suit;}
+function shuffleDeck(){const deck=Array.from({length:52},(_,i)=>i);for(let i=51;i>0;i--){const j=ri(0,i);[deck[i],deck[j]]=[deck[j],deck[i]];}return deck;}
+function pokerResult(cards){
+ const ranks=cards.map(c=>cardText(c).rank).sort((a,b)=>a-b),suits=cards.map(c=>Math.floor(c/13));
+ const counts={};for(const r of ranks)counts[r]=(counts[r]||0)+1;
+ const byCount=Object.entries(counts).map(([k,v])=>({rank:Number(k),count:v})).sort((a,b)=>b.count-a.count||b.rank-a.rank);
+ const flush=suits.every(v=>v===suits[0]);
+ const uniq=[...new Set(ranks)];
+ const straight=uniq.length===5&&(uniq[4]-uniq[0]===4||uniq.join(',')==='2,3,4,5,14');
+ if(straight&&flush&&uniq[0]===10)return {name:'ロイヤルフラッシュ',mult:200};
+ if(straight&&flush)return {name:'ストレートフラッシュ',mult:50};
+ if(byCount[0].count===4)return {name:'フォーカード',mult:25};
+ if(byCount[0].count===3&&byCount[1].count===2)return {name:'フルハウス',mult:9};
+ if(flush)return {name:'フラッシュ',mult:6};
+ if(straight)return {name:'ストレート',mult:4};
+ if(byCount[0].count===3)return {name:'スリーカード',mult:3};
+ if(byCount[0].count===2&&byCount[1].count===2)return {name:'ツーペア',mult:2};
+ if(byCount[0].count===2&&byCount[0].rank>=11)return {name:'ジャックス・オア・ベター',mult:1};
+ return {name:'ノーペア',mult:0};
+}
+function dealPoker(){
+ if(state.location!=='casino'||state.casino.poker?.stage==='hold')return;
+ const bet=wagerFrom('#pokerBet');if(!bet)return;
+ state.medals-=bet;
+ const deck=shuffleDeck();
+ state.casino.poker={stage:'hold',bet,hand:deck.slice(0,5),remaining:deck.slice(5),held:[false,false,false,false,false],result:null};
+ state.casino.plays++;state.casino.last='5枚配った。残したいカードを選んでドロー！';save();render();
+}
+function holdCard(index){
+ const p=state.casino.poker;
+ if(state.location!=='casino'||p?.stage!=='hold'||index<0||index>=5||!Number.isInteger(index))return;
+ p.held[index]=!p.held[index];save();render();
+}
+function drawPoker(){
+ const p=state.casino.poker;if(state.location!=='casino'||p?.stage!=='hold')return;
+ for(let i=0;i<5;i++)if(!p.held[i])p.hand[i]=p.remaining.shift();
+ const result=pokerResult(p.hand);
+ // Luck: a small chance for one additional helpful draw when the hand would lose.
+ if(!result.mult&&rand()<clamp(derived().luk*.0007,0,.045)){
+  let best=null;
+  for(let i=0;i<5;i++)for(let j=0;j<p.remaining.length;j++){
+   const trial=[...p.hand];trial[i]=p.remaining[j];const r=pokerResult(trial);
+   if(r.mult&&(!best||r.mult>best.result.mult))best={i,j,result:r};
+  }
+  if(best){p.hand[best.i]=p.remaining.splice(best.j,1)[0];result.name=best.result.name;result.mult=best.result.mult;}
+ }
+ const win=p.bet*result.mult;state.medals+=win;
+ p.stage='finished';p.result={...result,win};delete p.remaining;
+ state.casino.last=result.name+'：'+(win?win+'メダル獲得':'払い戻しなし')+'（賭け金'+p.bet+'）';
+ logEntry('ポーカー',state.casino.last);save();render();
+}
+const rouletteReds=new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+function rouletteWin(choice,number,picked){
+ if(choice==='number')return number===picked;
+ if(number===0)return false;
+ if(choice==='red')return rouletteReds.has(number);
+ if(choice==='black')return !rouletteReds.has(number);
+ if(choice==='even')return number%2===0;
+ if(choice==='odd')return number%2===1;
+ return false;
+}
+function playRoulette(){
+ if(state.location!=='casino')return;
+ const bet=wagerFrom('#rouletteBet');if(!bet)return;
+ const choice=$('#rouletteChoice')?.value;
+ const picked=Number($('#rouletteNumber')?.value);
+ if(!['red','black','even','odd','number'].includes(choice))return;
+ if(choice==='number'&&(!Number.isInteger(picked)||picked<0||picked>36))return;
+ state.medals-=bet;let number=ri(0,36);
+ if(!rouletteWin(choice,number,picked)&&rand()<clamp(derived().luk*.0008,0,.055))number=ri(0,36);
+ const won=rouletteWin(choice,number,picked),mult=choice==='number'?36:2,payout=won?bet*mult:0;
+ state.medals+=payout;state.casino.plays++;
+ const color=number===0?'緑':rouletteReds.has(number)?'赤':'黒';
+ state.casino.last='ルーレット：'+number+'（'+color+'） '+(won?'当たり！ '+payout+'メダル獲得':'ハズレ')+' / '+bet+'メダル賭け';
+ logEntry('ルーレット',state.casino.last);save();render();
+}
+function playRacing(){
+ if(state.location!=='casino')return;
+ const bet=wagerFrom('#raceBet');if(!bet)return;
+ const choice=Number($('#raceHorse')?.value);
+ if(!Number.isInteger(choice)||choice<0||choice>=horseRoster.length)return;
+ state.medals-=bet;
+ const total=horseRoster.reduce((n,h)=>n+h.weight,0);
+ let ticket=ri(1,total),winner=horseRoster.findIndex(h=>{ticket-=h.weight;return ticket<=0;});
+ if(winner!==choice&&rand()<clamp(derived().luk*.00055,0,.05))winner=choice;
+ const won=winner===choice,payout=won?bet*horseRoster[choice].payout:0;
+ state.medals+=payout;state.casino.plays++;
+ state.casino.last='競馬：優勝 '+horseRoster[winner].name+' / '+(won?'的中！ '+payout+'メダル獲得':'ハズレ')+' / '+bet+'メダル賭け';
+ logEntry('島の競馬',state.casino.last);save();render();
+}
+function redeemPrize(sku){
+ if(state.location!=='casino')return;
+ const prize=casinoPrizes.find(x=>x.sku===sku);
+ if(!prize||state.casino.purchased.includes(sku))return;
+ if(prize.job&&prize.job!==state.activeJob){toast('現在のジョブ専用の景品です');return;}
+ if(state.medals<prize.cost){toast('メダルが足りません');return;}
+ state.medals-=prize.cost;state.casino.purchased.push(sku);
+ if(prize.kind==='weapon'){
+  const oldHP=derived().maxHP;
+  const item={id:'casino-'+state.nextId++,casinoSku:sku,job:prize.job,name:prize.name,slot:'weapon',stat:{...prize.stat},enhance:0,price:0};
+  state.inventory.push(item);state.equipped.weapon=item.id;
+  state.hp=clamp(state.hp+Math.max(0,derived().maxHP-oldHP),1,derived().maxHP);
+ }else{state.casino.materials.push(sku);}
+ state.casino.last=prize.name+'を交換した！';logEntry('カジノ景品交換',prize.name+' / '+prize.cost+'メダル');save();render();
+}
+function casinoPokerHTML(){const p=state.casino.poker;
+ const cards=p?.hand?.map((c,i)=>{const label=displayCard(c),red=/[♥♦]/.test(label),held=p.stage==='hold'&&p.held[i];return `<button class="poker-card ${red?'red':''} ${held?'held':''}" data-pokerhold="${i}" ${p.stage!=='hold'?'disabled':''}>${label}<small>${p.stage==='hold'?(held?'★ HOLD':'タップで残す'):'結果'}</small></button>`;}).join('')||'';
+ return `<section class="panel"><div class="kicker">FIVE-CARD DRAW</div><h2 class="sectiontitle">♠ ドローポーカー</h2><p class="intro">5枚配って、残すカードをタップ。残りを1度だけ交換する。役に応じて配当。</p>
+ ${p?`<div class="poker-cards">${cards}</div>${p.stage==='hold'?`<button class="btn gold" data-cas="poker-draw">カードを交換して勝負</button>`:`<div class="casino-message">${p.result.name} / 配当 ${p.result.win}メダル</div>`}`:''}
+ ${p?.stage!=='hold'?`<div class="casino-controls"><label class="small">賭けメダル <input id="pokerBet" type="number" min="1" max="500" value="1"></label><button class="btn primary" data-cas="poker-deal">新しく配る</button></div>`:''}
+ <details><summary class="small muted">役と配当を見る</summary><p class="small intro">ロイヤル×200 / ストレートフラッシュ×50 / フォーカード×25 / フルハウス×9 / フラッシュ×6 / ストレート×4 / スリーカード×3 / ツーペア×2 / J以上のワンペア×1 / その他×0（配当倍率は賭け金を含む）</p></details></section>`;
+}
+function casinoRouletteHTML(){return `<section class="panel"><div class="kicker">EUROPEAN ROULETTE</div><h2 class="sectiontitle">◉ ルーレット</h2><p class="intro">0〜36の37マス。赤・黒・偶数・奇数は的中で2倍。数字一点は36倍。0は色・偶奇の対象外。</p>
+ <div class="casino-controls"><label class="small">予想 <select id="rouletteChoice"><option value="red">赤</option><option value="black">黒</option><option value="even">偶数</option><option value="odd">奇数</option><option value="number">数字一点</option></select></label><label class="small">数字 <select id="rouletteNumber">${Array.from({length:37},(_,i)=>`<option value="${i}">${i}</option>`).join('')}</select></label><label class="small">賭け <input id="rouletteBet" type="number" min="1" max="500" value="1"></label></div><button class="btn gold" data-cas="roulette">ルーレットを回す</button></section>`;}
+function casinoHorseHTML(){return `<section class="panel"><div class="kicker">ISLAND RACING</div><h2 class="sectiontitle">♞ 島の競馬</h2><p class="intro">4頭のうち勝つと思う1頭に単勝。各馬の勝ちやすさと配当が違う。</p>
+ <div class="casino-controls"><label class="small">出走馬 <select id="raceHorse">${horseRoster.map((h,i)=>`<option value="${i}">${h.name}（${h.payout}倍）</option>`).join('')}</select></label><label class="small">賭け <input id="raceBet" type="number" min="1" max="500" value="1"></label></div><button class="btn gold" data-cas="racing">出走！</button></section>`;}
+function casinoPrizesHTML(){return `<section class="panel"><div class="kicker">PRIZE EXCHANGE</div><h2 class="sectiontitle">✦ 景品交換所</h2><p class="intro">店売り武器を大きく上回る特別景品。交換済み景品は再入手できない。錆びた始原剣は将来の武器合成用に保管される。</p>
+ ${casinoPrizes.map(item=>{const owned=state.casino.purchased.includes(item.sku),locked=!!item.job&&item.job!==state.activeJob;
+ return `<div class="prize-item"><div><strong>${esc(item.name)}</strong><div class="tiny muted">${item.kind==='material'?'合成素材（今は装備不可）':jobs[item.job].name+'専用・武器'}</div><p>${item.kind==='material'?esc(item.description):esc(statLine(item.stat))}</p></div><button class="btn ${owned?'':'gold'}" data-prize="${item.sku}" ${owned||locked||state.medals<item.cost?'disabled':''}>${owned?'交換済み':locked?'別ジョブ専用':num(item.cost)+' M'}</button></div>`;}).join('')}
+ ${state.casino.materials.length?`<p class="small muted">所持する合成素材：${state.casino.materials.map(s=>esc(casinoPrizes.find(x=>x.sku===s)?.name||s)).join('、')}</p>`:''}</section>`;}
+function casinoHTML(){return `<section class="panel"><div class="kicker">CASINO ISLAND</div><h2 class="sectiontitle">カジノ島</h2><p class="intro">迷宮を離れ、船で訪れる娯楽の島。ここではゴールドではなくメダルを使う。ゲーム内通貨のみ・実際のお金との交換や換金はできない。</p>
+ <div class="casino-grid"><div class="casino-balance"><span class="small">所持メダル</span><strong>${num(state.medals)} M</strong><span class="tiny muted">所持G：${num(state.gold)}</span></div><div class="casino-balance"><span class="small">遊戯回数</span><strong>${num(state.casino.plays)}</strong><span class="tiny muted">ジョブの「運」も抽選に微量影響</span></div></div>
+ <hr class="divider"><div class="split"><h3 class="sectiontitle">両替所</h3><button class="btn ghost" data-travel="main">⛵ 拠点へ戻る</button></div><p class="intro">${GOLD_PER_MEDAL}G → 1メダル。現時点ではメダルからGへは戻せない。</p>
+ <div class="buttonrow">${[1,10,50,100].map(m=>`<button class="btn" data-exchange="${m}" ${state.gold<m*GOLD_PER_MEDAL?'disabled':''}>${m}M<br>${num(m*GOLD_PER_MEDAL)}G</button>`).join('')}</div>
+ ${state.casino.last?`<div class="casino-message" style="margin-top:14px">${esc(state.casino.last)}</div>`:''}</section>
+ <div class="casino-grid"><div>${casinoPokerHTML()}</div><div>${casinoRouletteHTML()}</div><div class="wide">${casinoHorseHTML()}</div><div class="wide">${casinoPrizesHTML()}</div></div>`;}
+function render(){
+ renderHero();
+ const nav=document.querySelector('.nav');
+ if(state.location==='casino'){
+  tab='casino';nav.innerHTML='<button data-tab="casino" class="active">♠ カジノ島</button>';
+ }else{
+  if(tab==='casino')tab='town';
+  nav.innerHTML='<button data-tab="explore">⚔ 探索</button><button data-tab="gear">◇ 装備</button><button data-tab="town">⌂ 拠点</button><button data-tab="jobs">♜ ジョブ</button><button data-tab="record">≡ 記録</button>';
+ }
+ document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+ $('#view').innerHTML=tab==='casino'?casinoHTML():tab==='explore'?exploreHTML():tab==='gear'?gearHTML():tab==='town'?townHTML():tab==='jobs'?jobsHTML():recordHTML();
+}
+function exportSave(){const blob=new Blob([JSON.stringify({app:'INFINITE_ABYSS',exportedAt:new Date().toISOString(),state},null,2)],{type:'application/json'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='abyss-v06-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast('JSON書き出し完了');}
+function importSave(file){if(!file)return;const rd=new FileReader();rd.onload=()=>{try{const data=JSON.parse(rd.result),s=data.state||data;if(!valid(upgradeState(s)))throw Error('v0.5/0.6形式のみ対応');if(!confirm('現在のデータを上書きします。続けますか？'))return;state=s;lastResult=null;tab=state.location==='casino'?'casino':'explore';save();render();toast('データを復元しました');}catch(e){toast('読み込み失敗：'+e.message);}};rd.readAsText(file);}
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;
- if(b.dataset.tab){tab=b.dataset.tab;lastResult=null;render();return;}
+ if(b.dataset.tab){if(state.location==='casino'&&b.dataset.tab!=='casino'){toast('拠点に帰還してから移動してください');return;}tab=b.dataset.tab;lastResult=null;render();return;}
+ if(b.dataset.travel){travel(b.dataset.travel);return;}
+ if(b.dataset.exchange){exchangeMedals(Number(b.dataset.exchange));return;}
+ if(b.dataset.prize){redeemPrize(b.dataset.prize);return;}
+ if(b.dataset.pokerhold!==undefined){holdCard(Number(b.dataset.pokerhold));return;}
+ if(b.dataset.cas=== 'poker-deal'){dealPoker();return;}
+ if(b.dataset.cas=== 'poker-draw'){drawPoker();return;}
+ if(b.dataset.cas=== 'roulette'){playRoulette();return;}
+ if(b.dataset.cas=== 'racing'){playRacing();return;}
  if(b.dataset.floor){setFloor(Number(b.dataset.floor));return;}
  if(b.dataset.fight){run(Number(b.dataset.fight));return;}
  if(b.dataset.boss){if(confirm('腐敗した騎士に挑戦する？'))run(1,true);return;}
@@ -305,7 +506,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||
  switch(b.dataset.action){case 'inn':inn();break;case 'export':exportSave();break;case 'import':$('#importFile').click();break;case 'reset':if(confirm('本当にセーブを全消去してLv.1から始めますか？')){state=createState();tab='explore';lastResult=null;save();render();toast('初期化しました');}break;}
 });
 document.addEventListener('change',e=>{if(e.target.id==='gearFilter'){gearFilter=e.target.value;render();}if(e.target.id==='importFile'){importSave(e.target.files?.[0]);e.target.value='';}});
-window.ABYSS_DEBUG={state:()=>structuredClone(state),stats:()=>derived(),shop:()=>structuredClone(shopCatalog),skills:j=>structuredClone(skills[j||state.activeJob]),reset:()=>{state=createState();save();render();},gainExp:n=>{const r=gainExperience(n);save();render();return r;},setState:s=>{if(!valid(s))throw Error('invalid state');state=structuredClone(s);save();render();},fight:n=>run(n),rollSkill:()=>rollSkill(),actions:()=>actionsPerTurn(derived().agi)};
+window.ABYSS_DEBUG={state:()=>structuredClone(state),stats:()=>derived(),shop:()=>structuredClone(shopCatalog),skills:j=>structuredClone(skills[j||state.activeJob]),reset:()=>{state=createState();save();render();},gainExp:n=>{const r=gainExperience(n);save();render();return r;},setState:s=>{if(!valid(upgradeState(s)))throw Error('invalid state');state=structuredClone(s);save();render();},casino:()=>structuredClone(state.casino),grow:()=>structuredClone(levelGrowth),fight:n=>run(n),rollSkill:()=>rollSkill(),actions:()=>actionsPerTurn(derived().agi)};
 save();render();
 })();
 </script>
