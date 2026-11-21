@@ -17,11 +17,11 @@
 </style>
 </head>
 <body>
-<main class="shell"><header class="mast"><div><div class="eyebrow">INFINITE ABYSS // PROTOTYPE 0.11</div><h1 class="brand">無限迷宮アビス</h1><div class="subtitle">強くなる理由など、強くなってから考えればいい。</div></div><div class="counter"><span class="chip" id="locationBadge">第1層</span><span class="coin" id="goldBadge">100 G</span></div></header><section class="hero" id="hero"></section><nav class="nav" aria-label="画面切り替え"><button data-tab="explore" class="active">⚔ 探索</button><button data-tab="gear">◇ 装備</button><button data-tab="town">⌂ 拠点</button><button data-tab="jobs">♜ ジョブ</button><button data-tab="record">≡ 記録</button></nav><div id="view" class="page" aria-live="polite"></div><footer class="foot">INSPIRED BY CLASSIC BROWSER RPGS · OFFLINE SINGLE-FILE GAME</footer></main><div class="toast" id="toast" role="status" aria-live="polite"></div><input id="importFile" type="file" accept="application/json,.json" hidden>
+<main class="shell"><header class="mast"><div><div class="eyebrow">INFINITE ABYSS // PROTOTYPE 0.12</div><h1 class="brand">無限迷宮アビス</h1><div class="subtitle">強くなる理由など、強くなってから考えればいい。</div></div><div class="counter"><span class="chip" id="locationBadge">第1層</span><span class="coin" id="goldBadge">100 G</span></div></header><section class="hero" id="hero"></section><nav class="nav" aria-label="画面切り替え"><button data-tab="explore" class="active">⚔ 探索</button><button data-tab="gear">◇ 装備</button><button data-tab="town">⌂ 拠点</button><button data-tab="jobs">♜ ジョブ</button><button data-tab="record">≡ 記録</button></nav><div id="view" class="page" aria-live="polite"></div><footer class="foot">INSPIRED BY CLASSIC BROWSER RPGS · OFFLINE SINGLE-FILE GAME</footer></main><div class="toast" id="toast" role="status" aria-live="polite"></div><input id="importFile" type="file" accept="application/json,.json" hidden>
 <script>
 'use strict';
 (()=>{
-// Infinite Abyss v0.11 — job switching preserves attributes, equipment and HP.
+// Infinite Abyss v0.12 — base weapon/armor power, mastery scaling, and accessory slot.
 const KEY='infinite-abyss-save-v5';
 const OLD_KEYS=['infinite-abyss-save-v1','infinite-abyss-save-v2','infinite-abyss-save-v3','infinite-abyss-save-v4'];
 const VERSION=5, JOB_CAP=60, MAX_LEVEL=10000;
@@ -44,6 +44,7 @@ const isForestBossFloor=f=>Number.isInteger(f)&&f>=10&&f<=FOREST_MAX_FLOOR&&f%10
 // Mastery is per equipment item, not per slot. EXP needed per mastery level never grows.
 const MASTERY_SCHEMA=1, MASTERY_EXP_PER_LEVEL=50, DEFAULT_MASTERY_CAP=2000;
 const MASTERY_TECH_EVERY=50, MASTERY_TECH_MAX_TIER=10, MASTERY_TECH_RATE=15;
+const EQUIPMENT_POWER_SCHEMA=1, ATTACK_PER_MASTERY=5, DEFENSE_PER_MASTERY=1;
 const MASTERY_SLOTS=['weapon','body'];
 // Magic charges are independent from weapon mastery and from jobs.
 const MAGIC_SCHEMA=1, MAGIC_USES_MAX=5000, MAGIC_SHOP_RESTORE_CAP=3000, MAGIC_SHOP_MIN_USES=800;
@@ -75,9 +76,10 @@ function rollMagicTurn(beerUsed=false,luck=8){const active=activeMagicItem(),ves
 // Prototype creator gifts: applied once when upgrading an existing v0.6 save.
 // Not handed out to fresh players. Without accounts, existing browsers cannot be identified individually.
 const DEV_GIFTS=[
- {id:'dev-laevateinn',name:'レーヴァテイン',job:'all',slot:'weapon',stat:{str:150,mag:150,luk:20},mastery:2000,masteryXp:0,maxMastery:2000,enhance:0,price:0,devGift:true},
- {id:'dev-genbu-armor',name:'玄武の鎧',job:'all',slot:'body',stat:{vit:100,dex:15,agi:15},mastery:2000,masteryXp:0,maxMastery:2000,enhance:0,price:0,devGift:true}
+ {id:'dev-laevateinn',name:'レーヴァテイン',job:'all',slot:'weapon',stat:{str:150,mag:150,luk:20},baseAttack:12000,mastery:2000,masteryXp:0,maxMastery:2000,enhance:0,price:0,devGift:true},
+ {id:'dev-genbu-armor',name:'玄武の鎧',job:'all',slot:'body',stat:{vit:100,dex:15,agi:15},baseDefense:2500,mastery:2000,masteryXp:0,maxMastery:2000,enhance:0,price:0,devGift:true}
 ];
+const AURA_GIFT={id:'dev-aura-crystal',name:'オーラの結晶',job:'all',slot:'accessory',stat:{},masteryProcMultiplier:3,price:0,enhance:0,devGift:true};
 const attrs=['str','mag','vit','dex','agi','luk'];
 const attrLabels={str:'力',mag:'魔力',vit:'生命力',dex:'器用さ',agi:'素早さ',luk:'運'};
 // Permanent stat gain happens at the exact level-up, using the currently equipped job.
@@ -139,27 +141,27 @@ const floors={
 const boss=['腐敗した騎士',560,48,500,400];
 // Exactly five purchasable products per job. Prices/bonuses intentionally similar.
 // Equipment has only the six primary attribute modifiers; no ATK/DEF/crit/regen stats.
-const slots=['weapon','head','body','hands','feet'];
-const slotName={weapon:'武器',head:'頭',body:'胴',hands:'手',feet:'足'};
+const slots=['weapon','head','body','hands','feet','accessory'];
+const slotName={weapon:'武器',head:'頭',body:'胴',hands:'手',feet:'足',accessory:'アクセサリー'};
 const shopTemplates=[
- {sku:'w',slot:'weapon',shop:'weapon',floor:1,level:1,price:80,stats:{str:2,mag:2},names:['訓練用の剣','見習いの杖','祈祷の杖','旅人の短剣']},
- {sku:'h',slot:'head',shop:'armor',floor:1,level:2,price:135,stats:{vit:1,dex:1},names:['戦士の帽子','術士の帽子','祈りの帽子','盗賊の頭巾']},
- {sku:'b',slot:'body',shop:'armor',floor:2,level:4,price:230,stats:{vit:2},names:['守りの鎧','紺のローブ','聖布の法衣','夜風の外套']},
- {sku:'g',slot:'hands',shop:'armor',floor:2,level:5,price:320,stats:{str:1,mag:1,dex:1},names:['冒険者の籠手','魔導の手袋','癒しの手袋','軽業の手袋']},
- {sku:'f',slot:'feet',shop:'armor',floor:3,level:7,price:450,stats:{agi:2,luk:1},names:['踏破のブーツ','軽羽の靴','巡礼の靴','疾風の靴']}
+ {sku:'w',slot:'weapon',shop:'weapon',floor:1,level:1,price:80,baseAttack:30,stats:{str:2,mag:2},names:['訓練用の剣','見習いの杖','祈祷の杖','旅人の短剣']},
+ {sku:'h',slot:'head',shop:'armor',floor:1,level:2,price:135,baseDefense:8,stats:{vit:1,dex:1},names:['戦士の帽子','術士の帽子','祈りの帽子','盗賊の頭巾']},
+ {sku:'b',slot:'body',shop:'armor',floor:2,level:4,price:230,baseDefense:15,stats:{vit:2},names:['守りの鎧','紺のローブ','聖布の法衣','夜風の外套']},
+ {sku:'g',slot:'hands',shop:'armor',floor:2,level:5,price:320,baseDefense:5,stats:{str:1,mag:1,dex:1},names:['冒険者の籠手','魔導の手袋','癒しの手袋','軽業の手袋']},
+ {sku:'f',slot:'feet',shop:'armor',floor:3,level:7,price:450,baseDefense:6,stats:{agi:2,luk:1},names:['踏破のブーツ','軽羽の靴','巡礼の靴','疾風の靴']}
 ];
 const shopCatalog=jobKeys.flatMap((job,j)=>shopTemplates.map(t=>{
  const stat={...t.stats};
  if(t.slot==='weapon')stat[jobs[job].mode==='magic'?'mag':'str']+=1;
  // Tiny class modifiers are temporary; all jobs share the same price tier.
  const mods=[0,5,-5,10];
- return {sku:job+'-'+t.sku,job,name:t.names[j],slot:t.slot,shop:t.shop,floor:t.floor,level:t.level,price:t.price+mods[j],stat,maxMastery:DEFAULT_MASTERY_CAP};
+ return {sku:job+'-'+t.sku,job,name:t.names[j],slot:t.slot,shop:t.shop,floor:t.floor,level:t.level,price:t.price+mods[j],stat,baseAttack:t.baseAttack||0,baseDefense:t.baseDefense||0,maxMastery:DEFAULT_MASTERY_CAP};
 }));
 // All casino prices are medals. They have no cash value, purchase channel or cash-out.
 const GOLD_PER_MEDAL=10;
 const horseRoster=[{name:'暁の疾風',weight:40,payout:2},{name:'銀嶺の雫',weight:30,payout:3},{name:'黒曜の牙',weight:20,payout:5},{name:'月影の流星',weight:10,payout:9}];
 const casinoPrizes=[
- ...jobKeys.map(j=>({sku:'relic-'+j,kind:'weapon',job:j,maxMastery:DEFAULT_MASTERY_CAP,name:({fighter:'王断の大剣',mage:'星詠みの大杖',healer:'天啓の聖杖',thief:'幽影の短剣'})[j],cost:2000,stat:({fighter:{str:48,vit:10,dex:7},mage:{mag:48,vit:10,luk:7},healer:{mag:48,vit:12,luk:5},thief:{str:48,agi:11,dex:7}})[j]})),
+ ...jobKeys.map(j=>({sku:'relic-'+j,kind:'weapon',job:j,maxMastery:DEFAULT_MASTERY_CAP,name:({fighter:'王断の大剣',mage:'星詠みの大杖',healer:'天啓の聖杖',thief:'幽影の短剣'})[j],cost:2000,baseAttack:750,stat:({fighter:{str:48,vit:10,dex:7},mage:{mag:48,vit:10,luk:7},healer:{mag:48,vit:12,luk:5},thief:{str:48,agi:11,dex:7}})[j]})),
  {sku:'rust-origin',kind:'material',name:'錆びた始原剣',cost:500,description:'将来の最強武器合成の土台。素材収集・合成機能は未実装。現時点では装備不可。'}
 ];
 const blankSlots=()=>Object.fromEntries(slots.map(s=>[s,null]));
@@ -171,8 +173,36 @@ const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 const primaryLabel=k=>attrLabels[k];
 const statLine=stat=>attrs.filter(k=>stat?.[k]).map(k=>`${primaryLabel(k)} +${stat[k]}`).join(' / ')||'補正なし';
 const isMasteryItem=item=>!!item&&MASTERY_SLOTS.includes(item.slot);
+// Migration and new purchases use the same item-level power fields. No job requirements to equip.
+function normalizeEquipmentPower(item){
+ if(!item||typeof item!=='object')return item;
+ const shop=item.shopSku?shopCatalog.find(i=>i.sku===item.shopSku):null;
+ const prize=item.casinoSku?casinoPrizes.find(i=>i.sku===item.casinoSku):null;
+ const defaults={weapon:{attack:30,defense:0},head:{attack:0,defense:8},body:{attack:0,defense:15},hands:{attack:0,defense:5},feet:{attack:0,defense:6},accessory:{attack:0,defense:0}};
+ const fallback=defaults[item.slot]||{attack:0,defense:0};
+ if(!Number.isFinite(item.baseAttack)||item.baseAttack<0)item.baseAttack=item.id==='dev-laevateinn'?12000:(shop?.baseAttack??prize?.baseAttack??fallback.attack);
+ if(!Number.isFinite(item.baseDefense)||item.baseDefense<0)item.baseDefense=item.id==='dev-genbu-armor'?2500:(shop?.baseDefense??prize?.baseDefense??fallback.defense);
+ if(item.id===AURA_GIFT.id)item.masteryProcMultiplier=3;
+ return item;
+}
+function powerValues(item){
+ if(!item)return {attack:0,defense:0};
+ normalizeEquipmentPower(item);
+ return {attack:item.baseAttack+(item.slot==='weapon'?(item.mastery||0)*ATTACK_PER_MASTERY:0),
+  defense:item.baseDefense+(item.slot==='body'?(item.mastery||0)*DEFENSE_PER_MASTERY:0)};
+}
+function powerText(item){const p=powerValues(item),parts=[];
+ if(item?.slot==='weapon')parts.push('基本攻撃 '+num(item.baseAttack)+' ＋熟練 '+num((item.mastery||0)*ATTACK_PER_MASTERY)+' ＝'+num(p.attack));
+ else if(item?.slot!=='accessory')parts.push('基本防御 '+num(item.baseDefense)+(item.slot==='body'?' ＋熟練 '+num(item.mastery||0)+' ＝'+num(p.defense):''));
+ if(item?.masteryProcMultiplier>1)parts.push('熟練技の発動率×'+item.masteryProcMultiplier);
+ return parts.join(' / ');
+}
+function masteryProcRate(){const accessory=state.inventory.find(i=>i.id===state.equipped.accessory&&i.slot==='accessory');
+ return clamp(MASTERY_TECH_RATE*(Number(accessory?.masteryProcMultiplier)||1),0,100);
+}
 function normalizeMastery(item){
  if(!item||typeof item!=='object')return item;
+ normalizeEquipmentPower(item);
  if(!Number.isInteger(item.maxMastery)||item.maxMastery<1)item.maxMastery=DEFAULT_MASTERY_CAP;
  if(isMasteryItem(item)){
   item.mastery=clamp(Number.isInteger(item.mastery)?item.mastery:0,0,item.maxMastery);
@@ -182,7 +212,7 @@ function normalizeMastery(item){
 }
 function masteryTier(item){return isMasteryItem(item)?Math.min(MASTERY_TECH_MAX_TIER,Math.floor((item.mastery||0)/MASTERY_TECH_EVERY)):0;}
 function masteryTechnique(item){const stage=masteryTier(item);if(!stage)return '熟練技 未解放（熟練50から）';
- return item.slot==='weapon'?`熟練技「極撃」：命中時15%で最終ダメージ×${stage*5}`:`熟練技「再生」：被弾時15%で最大HPの${stage*10}%回復`;
+ return item.slot==='weapon'?`熟練技「極撃」：命中時${masteryProcRate()}%で最終ダメージ×${stage*5}`:`熟練技「再生」：被弾時${masteryProcRate()}%で最大HPの${stage*10}%回復`;
 }
 function masteryText(item){if(!isMasteryItem(item))return '';
  normalizeMastery(item);
@@ -203,7 +233,7 @@ function grantBattleMastery(){const gains=[];
 const expNeed=l=>{const v=[0,25,40,60,85,115,145,175,220,265];return v[l]??(265+50*(l-9)+5*Math.max(0,l-9)*(l-10)/2);};
 function createState(){return {version:VERSION,activeJob:'mage',level:1,xp:0,hpGrowth:0,hp:78,gold:100,medals:0,baseStats:Object.fromEntries(attrs.map((key,i)=>[key,jobs.mage.base[i]])),casino:makeCasino(),location:'main',ore:0,floor:1,unlocked:1,
  kills:{1:0,2:0,3:0,4:0,5:0},wins:0,deaths:0,battleCount:0,bossDefeated:false,
- rng:0xAB155005,nextId:1,masterySchema:MASTERY_SCHEMA,magicSchema:MAGIC_SCHEMA,magics:[],equippedMagic:null,jobProgress:freshJobs(),loadouts:Object.fromEntries(jobKeys.map(j=>[j,blankSlots()])),inventory:[],equipped:blankSlots(),
+ rng:0xAB155005,nextId:1,masterySchema:MASTERY_SCHEMA,equipmentPowerSchema:EQUIPMENT_POWER_SCHEMA,magicSchema:MAGIC_SCHEMA,magics:[],equippedMagic:null,jobProgress:freshJobs(),loadouts:Object.fromEntries(jobKeys.map(j=>[j,blankSlots()])),inventory:[],equipped:blankSlots(),
  forest:makeForest(),history:[{id:0,headline:'新しい冒険',body:'6能力値・職業育成・カジノ島・装備熟練・魔法へようこそ。',at:'冒険開始'}]};}
 function makeCasino(){return {poker:null,last:'',plays:0,purchased:[],materials:[]};}
 function makeForest(){return {floor:1,unlocked:1,kills:{},bossesDefeated:{},battleRecords:[]};}
@@ -256,6 +286,20 @@ function upgradeState(s){if(!s||s.version!==VERSION||!jobs[s.activeJob])return s
   s.history=s.history||[];
   s.history.unshift({id:s.battleCount||0,headline:'熟練度システム解放',body:'既存セーブへレーヴァテイン・玄武の鎧（各熟練2000）を付与。',at:'v0.7移行'});
  }
+ // v0.12: preserve existing mastery and stats, adding attack/defense and an accessory slot.
+ if(s.equipmentPowerSchema!==EQUIPMENT_POWER_SCHEMA){
+  if(!s.equipped||typeof s.equipped!=='object')s.equipped=blankSlots();
+  if(!Object.hasOwn(s.equipped,'accessory'))s.equipped.accessory=null;
+  for(const j of jobKeys){if(s.loadouts?.[j]&&!Object.hasOwn(s.loadouts[j],'accessory'))s.loadouts[j].accessory=null;}
+  for(const item of s.inventory)normalizeEquipmentPower(item);
+  // No account identity: grant only on pre-existing development saves that own both test relics.
+  if(DEV_GIFTS.every(g=>s.inventory.some(i=>i.id===g.id))){
+   if(!s.inventory.some(i=>i.id===AURA_GIFT.id))s.inventory.push(normalizeEquipmentPower({...AURA_GIFT,stat:{}}));
+   if(!s.equipped.accessory)s.equipped.accessory=AURA_GIFT.id;
+  }
+  s.equipmentPowerSchema=EQUIPMENT_POWER_SCHEMA;
+ }
+ if(s.equipped&&!Object.hasOwn(s.equipped,'accessory'))s.equipped.accessory=null;
  return s;
 }
 function valid(s){return s?.version===VERSION&&jobs[s.activeJob]&&Number.isInteger(s.level)&&s.level>0&&Array.isArray(s.inventory)&&s.jobProgress&&s.loadouts&&s.equipped&&slots.every(k=>Object.hasOwn(s.equipped,k))&&Number.isFinite(s.rng);}
@@ -279,10 +323,11 @@ function enhancedAttribute(item){
  return (item.stat?.mag||0)>(item.stat?.str||0)?'mag':'str';
 }
 function derived(){
- const d={...state.baseStats};
+ const d={...state.baseStats,baseAttack:0,baseDefense:0};
  for(const slot of slots){const i=state.inventory.find(i=>i.id===state.equipped[slot]);if(!i)continue;
   for(const key of attrs)d[key]+=(i.stat?.[key]||0);
   if(i.enhance)d[enhancedAttribute(i)]+=i.enhance;
+  const power=powerValues(i);d.baseAttack+=power.attack;d.baseDefense+=power.defense;
  }
  d.maxHP=50+4*d.vit+state.hpGrowth;return d;
 }
@@ -406,12 +451,12 @@ function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?fo
    const sk=rollSkill();if(sk){skillUses[sk.name]=(skillUses[sk.name]||0)+1;}
    const raw=jobs[state.activeJob].mode==='magic'?d.mag:d.str;
    const variance=.90+rand()*.20+Math.min(.06,d.luk/700);
-   let hit=Math.max(1,Math.round((2+raw*2.05)*variance*(sk?.power||1)));
+   let hit=Math.max(1,Math.round((2+raw*2.05+d.baseAttack)*variance*(sk?.power||1)));
    // Mage's magic surge stays a passive mechanic, not a seventh character stat.
    const surged=state.activeJob==='mage'&&rand()*100<surgeRate(d.luk);
    if(surged){hit=Math.round(hit*2.5);surges++;}
    const weapon=equippedMastery('weapon'),weaponTier=masteryTier(weapon);
-   const masteryStrike=weaponTier>0&&rand()*100<MASTERY_TECH_RATE;
+   const masteryStrike=weaponTier>0&&rand()*100<masteryProcRate();
    if(masteryStrike)hit=Math.round(hit*(weaponTier*5));
    if(beerActive)hit=Math.round(hit*1.2);
    const dealt=Math.min(hp,hit);hp=Math.max(0,hp-hit);let extra='';
@@ -425,11 +470,11 @@ function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?fo
   if(stopped){record('反撃を阻止');continue;}
   const d2=derived();
   if(rand()*100>=accuracy(foe.dex,d2.agi,foe.luk,d2.luk)){dodges++;record('回避成功！');continue;}
-  let enemyHit=Math.max(1,Math.round((4+foe.str*1.35+(dungeon==='forest'?f*3:f*2))*(.90+rand()*.20)));
+  let enemyHit=Math.max(1,Math.round(Math.max(1,4+foe.str*1.35+(dungeon==='forest'?f*3:f*2)-d2.baseDefense)*(.90+rand()*.20)));
   if(guard)enemyHit=Math.max(1,Math.ceil(enemyHit*(1-guard/100)));
   state.hp-=enemyHit;damage+=enemyHit;
   const armor=equippedMastery('body'),armorTier=masteryTier(armor);
-  const masteryHeal=state.hp>0&&armorTier>0&&rand()*100<MASTERY_TECH_RATE;
+  const masteryHeal=state.hp>0&&armorTier>0&&rand()*100<masteryProcRate();
   const recovered=masteryHeal?recover(Math.ceil(derived().maxHP*armorTier*.10)):0;
   record('敵の攻撃 '+enemyHit+'ダメージ'+(masteryHeal?'［再生：HP+'+recovered+'］':''));
   if(state.hp<=0){failed=true;break;}
@@ -516,7 +561,7 @@ function buy(sku){const item=shopCatalog.find(x=>x.sku===sku);if(!item||item.job
  if(state.inventory.some(x=>x.shopSku===sku)){toast('購入済み');return;}
  if(state.gold<item.price){toast('G不足');return;}
  const before=derived().maxHP;
- const equipItem=normalizeMastery({id:'shop-'+state.nextId++,shopSku:sku,job:item.job,name:item.name,slot:item.slot,stat:{...item.stat},enhance:0,price:item.price,maxMastery:item.maxMastery});
+ const equipItem=normalizeMastery({id:'shop-'+state.nextId++,shopSku:sku,job:item.job,name:item.name,slot:item.slot,stat:{...item.stat},baseAttack:item.baseAttack,baseDefense:item.baseDefense,enhance:0,price:item.price,maxMastery:item.maxMastery});
  state.inventory.push(equipItem);state.equipped[item.slot]=equipItem.id;state.gold-=item.price;
  state.hp=clamp(state.hp+Math.max(0,derived().maxHP-before),1,derived().maxHP);
  logEntry('購入：'+item.name,item.price+'Gで購入し装備');save();render();toast(item.name+' を装備！');
@@ -524,7 +569,7 @@ function buy(sku){const item=shopCatalog.find(x=>x.sku===sku);if(!item||item.job
 function inn(){if(state.hp>=derived().maxHP){toast('すでに全快');return;}if(state.gold<20){toast('20G不足');return;}
  state.gold-=20;state.hp=derived().maxHP;state.floor=1;logEntry('宿屋','20GでHP全回復');save();render();toast('HP全快！');
 }
-function forge(id){const item=state.inventory.find(i=>i.id===id);if(!item)return;
+function forge(id){const item=state.inventory.find(i=>i.id===id);if(!item||item.slot==='accessory')return;
  const n=item.enhance||0,cost=70*(n+1),ore=n>0?n:0;
  if(n>=5||state.gold<cost||state.ore<ore){toast('強化条件を満たしていません');return;}
  const before=derived().maxHP;state.gold-=cost;state.ore-=ore;item.enhance=n+1;
@@ -582,7 +627,7 @@ function renderHero(){const d=derived(),p=state.jobProgress[state.activeJob],max
  <div class="bars"><div><div class="barline"><span>HP（生命力から算出）</span><strong>${num(state.hp)} / ${num(d.maxHP)}</strong></div><div class="track"><div class="fill hp ${state.hp/d.maxHP<.33?'low':''}" style="width:${clamp(state.hp/d.maxHP*100,0,100)}%"></div></div></div>
  <div><div class="barline"><span>総合EXP</span><strong>${num(state.xp)} / ${num(max)}</strong></div><div class="track"><div class="fill xp" style="width:${clamp(state.xp/max*100,0,100)}%"></div></div></div>
  <div><div class="barline"><span>ジョブEXP</span><strong>${p.level>=JOB_CAP?'MAX':num(p.xp)+' / '+num(expNeed(p.level))}</strong></div><div class="track"><div class="fill jobxp" style="width:${p.level>=JOB_CAP?100:clamp(p.xp/expNeed(p.level)*100,0,100)}%"></div></div></div></div>
- <div class="statgrid six">${attrs.map(a=>`<div class="stat"><span>${attrLabels[a]}</span><strong>${num(d[a])}</strong></div>`).join('')}</div>
+ <div class="statgrid six">${attrs.map(a=>`<div class="stat"><span>${attrLabels[a]}</span><strong>${num(d[a])}</strong></div>`).join('')}</div><div class="info" style="margin-top:10px"><span class="pill gold">装備攻撃 ${num(d.baseAttack)}</span><span class="pill blue">装備防御 ${num(d.baseDefense)}</span><span class="pill">熟練技 ${masteryProcRate()}%</span></div>
  <div class="hint" style="margin-top:14px">命中 ${accuracy(d.dex,8,d.luk,8).toFixed(1)}% / 回避 ${ (100-accuracy(8,d.agi,8,d.luk)).toFixed(1)}%（基準値8の相手） · 1ターン ${actionsPerTurn(d.agi)}回行動</div>`;
  $('#locationBadge').textContent=state.location==='casino'?'カジノ島':state.location==='forest'?'魔の森・'+state.forest.floor+'階':'第'+state.floor+'層';$('#goldBadge').textContent=num(state.gold)+' G'+(state.location==='casino'?' / '+num(state.medals)+' M':'');
 }
@@ -603,9 +648,9 @@ function exploreHTML(){const f=state.floor,v=floors[f],done=state.kills[f],need=
  <p class="hint">命中：器用さ＋運／回避：素早さ＋運／連続攻撃：素早さ20ごとに+1回（最大4回）。スキルはジョブLvで解放、MP不要。魔力暴走は魔術師のパッシブ。</p></section>
  ${resultHTML()}<section class="panel"><h3 class="sectiontitle">最近の記録</h3>${state.history.slice(0,5).map(x=>`<div class="log"><strong>${esc(x.headline)}</strong><p>${esc(x.body)}</p></div>`).join('')}</section>`;
 }
-function gearHTML(){const d=derived();const equipped=slots.map(s=>{const i=state.inventory.find(i=>i.id===state.equipped[s]);return `<div class="gear"><div class="slot">${slotName[s]}</div><div class="name">${esc(i?.name||'未装備')}</div><div class="affix">${i?statLine(i.stat)+(i.enhance?' / 強化+'+i.enhance:'')+(isMasteryItem(i)?'<div class="masteryline">'+esc(masteryText(i))+'</div>':''):'補正なし'}</div></div>`;}).join('');
- const items=state.inventory.filter(i=>(gearFilter==='all'||i.slot===gearFilter)).map(i=>{const wearing=state.equipped[i.slot]===i.id;return `<div class="item ${wearing?'equipped':''}"><div><div class="meta">${slotName[i.slot]}</div><h3>${esc(i.name)}${i.enhance?' +'+i.enhance:''}</h3><div class="spec">${statLine(i.stat)}${isMasteryItem(i)?'<div class="masteryline">'+esc(masteryText(i))+'</div>':''}</div></div><div class="itemactions">${wearing?'<span class="tag">装備中</span>':`<button class="btn primary" data-equip="${i.id}">装備</button>${i.devGift||i.casinoSku?'':`<button class="btn ghost" data-sell="${i.id}">売却</button>`}`}</div></div>`;}).join('');
- return `<section class="panel"><div class="kicker">EQUIPMENT</div><h2 class="sectiontitle">装備構成</h2><p class="intro">武器・胴防具は戦闘終了時に熟練EXPを1〜4獲得し、50EXPで熟練度+1。装備ごとに最大熟練度を保持（通常2000）。熟練50から技が解放され、500で威力・回復効果が上限に達する。</p><div class="geargrid">${equipped}</div><p class="hint">力 ${d.str} / 魔力 ${d.mag} / 生命力 ${d.vit} / 器用さ ${d.dex} / 素早さ ${d.agi} / 運 ${d.luk}</p></section>
+function gearHTML(){const d=derived();const equipped=slots.map(s=>{const i=state.inventory.find(i=>i.id===state.equipped[s]);return `<div class="gear"><div class="slot">${slotName[s]}</div><div class="name">${esc(i?.name||'未装備')}</div><div class="affix">${i?statLine(i.stat)+' / '+powerText(i)+(i.enhance?' / 強化+'+i.enhance:'')+(isMasteryItem(i)?'<div class="masteryline">'+esc(masteryText(i))+'</div>':''):'補正なし'}</div></div>`;}).join('');
+ const items=state.inventory.filter(i=>(gearFilter==='all'||i.slot===gearFilter)).map(i=>{const wearing=state.equipped[i.slot]===i.id;return `<div class="item ${wearing?'equipped':''}"><div><div class="meta">${slotName[i.slot]}</div><h3>${esc(i.name)}${i.enhance?' +'+i.enhance:''}</h3><div class="spec">${statLine(i.stat)} / ${powerText(i)}${isMasteryItem(i)?'<div class="masteryline">'+esc(masteryText(i))+'</div>':''}</div></div><div class="itemactions">${wearing?'<span class="tag">装備中</span>':`<button class="btn primary" data-equip="${i.id}">装備</button>${i.devGift||i.casinoSku?'':`<button class="btn ghost" data-sell="${i.id}">売却</button>`}`}</div></div>`;}).join('');
+ return `<section class="panel"><div class="kicker">EQUIPMENT</div><h2 class="sectiontitle">装備構成</h2><p class="intro">武器は熟練1につき基本攻撃+5、胴防具は基本防御+1。熟練技は50で解放・500で効果上限。オーラの結晶装備時は武器・胴の熟練技発動率が15%→45%になる。装備は原則ジョブ不問。</p><div class="geargrid">${equipped}</div><p class="hint">力 ${d.str} / 魔力 ${d.mag} / 生命力 ${d.vit} / 器用さ ${d.dex} / 素早さ ${d.agi} / 運 ${d.luk}<br>装備攻撃 ${num(d.baseAttack)} / 装備防御 ${num(d.baseDefense)} / 熟練技発動 ${masteryProcRate()}%</p></section>
  <section class="panel"><div class="kicker">MAGIC EQUIPMENT</div><h3 class="sectiontitle">魔法装備</h3><p class="intro">職業を問わず使用可能。魔法は1ターン最大1回まで自動発動。購入・回復・合成は拠点の魔法店へ。</p><div class="gear"><div class="name">${esc(activeMagicItem()?.name||'未装備')}</div><div class="affix">${activeMagicItem()?.kind==='spell'?`${num(activeMagicItem().uses)} / ${num(activeMagicItem().maxUses)}回`:activeMagicItem()?.kind==='vessel'?spellListForActive().map(x=>esc(x.name)+' '+num(x.uses)+'回').join(' / ')||'空の魔法器':'魔法なし'}</div></div></section>
  <section class="panel"><h3 class="sectiontitle">所持品（${state.inventory.length}件）</h3><div class="filters"><select id="gearFilter"><option value="all">全装備</option>${slots.map(s=>`<option value="${s}" ${gearFilter===s?'selected':''}>${slotName[s]}</option>`).join('')}</select></div><div class="itemlist">${items||'<div class="empty">所持装備なし。拠点の店で購入できる。</div>'}</div></section>`;
 }
@@ -613,8 +658,8 @@ function shopHTML(kind){const offers=shopCatalog.filter(i=>i.job===state.activeJ
  <div class="info"><span class="pill gold">${num(state.gold)}G</span><span class="pill">ジョブLv.${state.jobProgress[state.activeJob].level}</span></div>
  <div class="itemlist" style="margin-top:15px">${offers.map(i=>{const owned=state.inventory.some(x=>x.shopSku===i.sku),jl=state.jobProgress[state.activeJob].level,locked=state.unlocked<i.floor||jl<i.level,broke=state.gold<i.price;
  const reason=owned?'購入済み':state.unlocked<i.floor?'第'+i.floor+'層から':jl<i.level?'ジョブLv.'+i.level+'から':broke?'G不足':'購入して装備';
- return `<div class="item"><div><div class="meta">${slotName[i.slot]} / 第${i.floor}層・ジョブLv.${i.level}解放</div><h3>${esc(i.name)}</h3><div class="spec">${statLine(i.stat)}</div></div><div class="itemactions"><strong style="color:var(--gold)">${num(i.price)}G</strong><button class="btn ${!owned&&!locked&&!broke?'gold':''}" data-buy="${i.sku}" ${owned||locked||broke?'disabled':''}>${reason}</button></div></div>`;}).join('')}</div></section>`;}
-function servicesHTML(){const d=derived();const forge=state.inventory.filter(i=>i.job===state.activeJob&&state.equipped[i.slot]===i.id).map(i=>{const n=i.enhance||0,cost=70*(n+1),ore=n>0?n:0;return `<div class="forgerow"><div><strong>${i.name} +${n}</strong><small>${statLine(i.stat)} / 強化${n>=5?'上限':cost+'G + 鉱石'+ore}</small></div><button class="btn" data-forge="${i.id}" ${n>=5||state.gold<cost||state.ore<ore?'disabled':''}>強化</button></div>`;}).join('');
+ return `<div class="item"><div><div class="meta">${slotName[i.slot]} / 第${i.floor}層・ジョブLv.${i.level}解放</div><h3>${esc(i.name)}</h3><div class="spec">${statLine(i.stat)} / ${powerText(i)}</div></div><div class="itemactions"><strong style="color:var(--gold)">${num(i.price)}G</strong><button class="btn ${!owned&&!locked&&!broke?'gold':''}" data-buy="${i.sku}" ${owned||locked||broke?'disabled':''}>${reason}</button></div></div>`;}).join('')}</div></section>`;}
+function servicesHTML(){const d=derived();const forge=state.inventory.filter(i=>state.equipped[i.slot]===i.id&&i.slot!=='accessory').map(i=>{const n=i.enhance||0,cost=70*(n+1),ore=n>0?n:0;return `<div class="forgerow"><div><strong>${i.name} +${n}</strong><small>${statLine(i.stat)} / ${powerText(i)} / 強化${n>=5?'上限':cost+'G + 鉱石'+ore}</small></div><button class="btn" data-forge="${i.id}" ${n>=5||state.gold<cost||state.ore<ore?'disabled':''}>強化</button></div>`;}).join('');
  return `<section class="panel"><div class="kicker">THE CAMP</div><h2 class="sectiontitle">宿屋・鍛冶屋</h2><div class="towncards"><div class="towncard"><h3>宿屋</h3><p>20GでHP全回復して第1層に戻る。</p><button class="btn primary" data-action="inn" ${state.hp>=d.maxHP||state.gold<20?'disabled':''}>HP全回復 20G</button></div><div class="towncard"><h3>鍛冶屋</h3><p>装備強化+5まで。武器は力／魔力、防具は生命力が増える。試作仕様。</p><span class="small">鉱石：${num(state.ore)}</span></div></div><hr class="divider"><div class="forgeitems">${forge||'<div class="empty">強化できる装備がない</div>'}</div></section>`;
 }
 function magicShopHTML(){
@@ -646,8 +691,8 @@ function jobsHTML(){const cards=jobKeys.map(j=>{const p=state.jobProgress[j],sel
  return `<section class="panel"><div class="kicker">ADVENTURER GUILD</div><h2 class="sectiontitle">ジョブ・転職</h2><p class="intro">総合Lvは共通。経験値を10獲得したら、総合EXPと現在のジョブEXPに10ずつ加算。ジョブLv60以降はジョブ側のみ切り捨て。スキルは5/15/30/45/60で解放、MPなし。</p><div class="jobcards">${cards}</div><p class="hint">転職時は総合Lvを維持し、HP割合を引き継ぐ。転職しても6能力値・HP・装備は変わらない。購入できる武具のラインナップとジョブスキルは職業別。</p></section>`;
 }
 function recordHTML(){return `<section class="panel"><div class="kicker">ADVENTURE JOURNAL</div><h2 class="sectiontitle">冒険記録とセーブ</h2><div class="info"><span class="pill">${num(state.wins)}勝・${state.deaths}敗</span><span class="pill">到達第${state.unlocked}層</span><span class="pill">鉱石${num(state.ore)}</span><span class="pill">魔の森：第${state.forest.unlocked}階</span></div>
- <p class="intro">v0.7セーブを引き継ぎ、魔法店・魔法器システムを追加。v0.6のセーブを維持して熟練度を自動追加。既存セーブの初回移行時のみレーヴァテイン／玄武の鎧（各熟練2000）を付与。v0.11から転職で装備を切り替えず、6能力値とHPを維持します。セーブはブラウザ内に保存されます。</p><div class="buttonrow"><button class="btn primary" data-action="export">セーブを出力</button><button class="btn" data-action="import">JSONを読込</button><button class="btn danger" data-action="reset">セーブを初期化</button></div>
- <hr class="divider"><h3 class="sectiontitle">現行仕様</h3><div class="notice">6能力値：力（物理攻撃）、魔力（魔法攻撃）、生命力（HP成長）、器用さ（命中）、素早さ（回避・ターン行動回数）、運（命中・回避・スキル発動・魔力暴走・乱数報酬）。HPは派生値、MPなし。ATK・DEF・会心率・会心回復など旧補助ステータスは廃止。装備ドロップなし、職業ごとに固定5商品。数値は仮バランス。武器・胴防具に個別熟練度（通常上限2000、50EXPで+1）、熟練技は50ごとに5倍攻撃／最大HP10%回復ずつ成長し、熟練500で50倍／100%に到達。発動率は運の影響なしで一律15%。魔法は別枠で1ターン最大1回。最大5000回・魔法店回復3000回まで。残り799回以下は魔法店では回復・合成不可。</div>
+ <p class="intro">既存セーブの6能力値・熟練度・魔法・魔の森を維持。v0.12で武器の基本攻撃・防具の基本防御を追加。開発用のレーヴァテイン／玄武の鎧を持つ既存セーブにはアクセサリー「オーラの結晶」を一度だけ付与して自動装備。セーブはブラウザ内保存です。</p><div class="buttonrow"><button class="btn primary" data-action="export">セーブを出力</button><button class="btn" data-action="import">JSONを読込</button><button class="btn danger" data-action="reset">セーブを初期化</button></div>
+ <hr class="divider"><h3 class="sectiontitle">現行仕様</h3><div class="notice">6能力値：力（物理攻撃）、魔力（魔法攻撃）、生命力（HP成長）、器用さ（命中）、素早さ（回避・ターン行動回数）、運（命中・回避・スキル発動・魔力暴走・乱数報酬）。HPは派生値、MPなし。ATK・DEF・会心率・会心回復など旧補助ステータスは廃止。装備ドロップなし、職業ごとに固定5商品。数値は仮バランス。武器・胴防具に個別熟練度（通常上限2000、50EXPで+1）、熟練技は50ごとに5倍攻撃／最大HP10%回復ずつ成長し、熟練500で50倍／100%に到達。発動率は基本15%（オーラの結晶装備時45%）。武器の基本攻撃は熟練1につき+5、胴防具の基本防御は熟練1につき+1。魔法は別枠で1ターン最大1回。最大5000回・魔法店回復3000回まで。残り799回以下は魔法店では回復・合成不可。</div>
  <p class="intro">v0.9では「魔の森」50階を新設。各10階のボスは再戦可能で、50階の難易度は大幅増。ボス専用の素材・魔法ドロップテーブルは作成済みだが中身は空。実際の素材ドロップや合成は未実装。</p>
  <hr class="divider"><h3 class="sectiontitle">直近の冒険ログ</h3>${state.history.slice(0,50).map(x=>`<div class="log"><div class="date">${esc(x.at)}</div><strong>${esc(x.headline)}</strong><p>${esc(x.body)}</p></div>`).join('')}</section>`;}
 // Casino Island is fully offline. Medals are earned only by exchanging in-game gold or games.
@@ -773,12 +818,11 @@ function redeemPrize(sku){
  if(state.location!=='casino')return;
  const prize=casinoPrizes.find(x=>x.sku===sku);
  if(!prize||state.casino.purchased.includes(sku))return;
- if(prize.job&&prize.job!==state.activeJob){toast('現在のジョブ専用の景品です');return;}
- if(state.medals<prize.cost){toast('メダルが足りません');return;}
+  if(state.medals<prize.cost){toast('メダルが足りません');return;}
  state.medals-=prize.cost;state.casino.purchased.push(sku);
  if(prize.kind==='weapon'){
   const oldHP=derived().maxHP;
-  const item=normalizeMastery({id:'casino-'+state.nextId++,casinoSku:sku,job:prize.job,name:prize.name,slot:'weapon',stat:{...prize.stat},enhance:0,price:0,maxMastery:prize.maxMastery});
+  const item=normalizeMastery({id:'casino-'+state.nextId++,casinoSku:sku,job:prize.job,name:prize.name,slot:'weapon',stat:{...prize.stat},baseAttack:prize.baseAttack,enhance:0,price:0,maxMastery:prize.maxMastery});
   state.inventory.push(item);state.equipped.weapon=item.id;
   state.hp=clamp(state.hp+Math.max(0,derived().maxHP-oldHP),1,derived().maxHP);
  }else{state.casino.materials.push(sku);}
@@ -796,8 +840,8 @@ function casinoRouletteHTML(){return `<section class="panel"><div class="kicker"
 function casinoHorseHTML(){return `<section class="panel"><div class="kicker">ISLAND RACING</div><h2 class="sectiontitle">♞ 島の競馬</h2><p class="intro">4頭のうち勝つと思う1頭に単勝。各馬の勝ちやすさと配当が違う。</p>
  <div class="casino-controls"><label class="small">出走馬 <select id="raceHorse">${horseRoster.map((h,i)=>`<option value="${i}">${h.name}（${h.payout}倍）</option>`).join('')}</select></label><label class="small">賭け <input id="raceBet" type="number" min="1" max="500" value="1"></label></div><button class="btn gold" data-cas="racing">出走！</button></section>`;}
 function casinoPrizesHTML(){return `<section class="panel"><div class="kicker">PRIZE EXCHANGE</div><h2 class="sectiontitle">✦ 景品交換所</h2><p class="intro">店売り武器を大きく上回る特別景品。交換済み景品は再入手できない。錆びた始原剣は将来の武器合成用に保管される。</p>
- ${casinoPrizes.map(item=>{const owned=state.casino.purchased.includes(item.sku),locked=!!item.job&&item.job!==state.activeJob;
- return `<div class="prize-item"><div><strong>${esc(item.name)}</strong><div class="tiny muted">${item.kind==='material'?'合成素材（今は装備不可）':jobs[item.job].name+'専用・武器'}</div><p>${item.kind==='material'?esc(item.description):esc(statLine(item.stat))}</p></div><button class="btn ${owned?'':'gold'}" data-prize="${item.sku}" ${owned||locked||state.medals<item.cost?'disabled':''}>${owned?'交換済み':locked?'別ジョブ専用':num(item.cost)+' M'}</button></div>`;}).join('')}
+ ${casinoPrizes.map(item=>{const owned=state.casino.purchased.includes(item.sku),locked=false;
+ return `<div class="prize-item"><div><strong>${esc(item.name)}</strong><div class="tiny muted">${item.kind==='material'?'合成素材（今は装備不可）':jobs[item.job].name+'向け・全ジョブ装備可'}</div><p>${item.kind==='material'?esc(item.description):esc(statLine(item.stat)+' / 基本攻撃 '+num(item.baseAttack||0))}</p></div><button class="btn ${owned?'':'gold'}" data-prize="${item.sku}" ${owned||locked||state.medals<item.cost?'disabled':''}>${owned?'交換済み':locked?'別ジョブ専用':num(item.cost)+' M'}</button></div>`;}).join('')}
  ${state.casino.materials.length?`<p class="small muted">所持する合成素材：${state.casino.materials.map(s=>esc(casinoPrizes.find(x=>x.sku===s)?.name||s)).join('、')}</p>`:''}</section>`;}
 function casinoHTML(){return `<section class="panel"><div class="kicker">CASINO ISLAND</div><h2 class="sectiontitle">カジノ島</h2><p class="intro">迷宮を離れ、船で訪れる娯楽の島。ここではゴールドではなくメダルを使う。ゲーム内通貨のみ・実際のお金との交換や換金はできない。</p>
  <div class="casino-grid"><div class="casino-balance"><span class="small">所持メダル</span><strong>${num(state.medals)} M</strong><span class="tiny muted">所持G：${num(state.gold)}</span></div><div class="casino-balance"><span class="small">遊戯回数</span><strong>${num(state.casino.plays)}</strong><span class="tiny muted">ジョブの「運」も抽選に微量影響</span></div></div>
@@ -852,7 +896,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||
  switch(b.dataset.action){case 'inn':inn();break;case 'export':exportSave();break;case 'import':$('#importFile').click();break;case 'reset':if(confirm('本当にセーブを全消去してLv.1から始めますか？')){state=createState();tab='explore';lastResult=null;save();render();toast('初期化しました');}break;}
 });
 document.addEventListener('change',e=>{if(e.target.id==='gearFilter'){gearFilter=e.target.value;render();}if(e.target.id==='importFile'){importSave(e.target.files?.[0]);e.target.value='';}});
-window.ABYSS_DEBUG={state:()=>structuredClone(state),magicCatalog:()=>structuredClone(MAGIC_CATALOG),buyMagic,restoreMagic,infuseMagic,extractMagic,equipMagic,magicProcRate:(key,mult,luk)=>magicProcRate({key},{multiplier:mult},luk),rollMagicTurn:()=>rollMagicTurn(false,derived().luk),mastery:itemId=>{const i=state.inventory.find(x=>x.id===itemId);return i?structuredClone(normalizeMastery(i)):null;},masteryTech:(itemId)=>masteryTechnique(state.inventory.find(x=>x.id===itemId)),gainMastery:()=>{const x=grantBattleMastery();save();render();return x;},stats:()=>derived(),shop:()=>structuredClone(shopCatalog),skills:j=>structuredClone(skills[j||state.activeJob]),reset:()=>{state=createState();save();render();},gainExp:n=>{const r=gainExperience(n);save();render();return r;},setState:s=>{if(!valid(upgradeState(s)))throw Error('invalid state');state=structuredClone(s);save();render();},casino:()=>structuredClone(state.casino),forest:()=>structuredClone(state.forest),forestRecords:()=>structuredClone(state.forest.battleRecords||[]),forestBosses:()=>structuredClone(FOREST_BOSSES),forestDrops:()=>structuredClone(FOREST_BOSS_DROP_TABLES),itemDefinitions:()=>structuredClone(ITEM_CATALOG),goForestFloor:n=>setForestFloor(n),fightForest:n=>run(n,isForestBossFloor(state.forest.floor),'forest'),grow:()=>structuredClone(levelGrowth),pokerResult:cards=>pokerResult(cards),rouletteWin:(c,n,p)=>rouletteWin(c,n,p),fight:n=>run(n),rollSkill:()=>rollSkill(),actions:()=>actionsPerTurn(derived().agi)};
+window.ABYSS_DEBUG={power:itemId=>{const item=state.inventory.find(i=>i.id===itemId);return item?{...powerValues(item)}:null;},masteryProcRate:()=>masteryProcRate(),state:()=>structuredClone(state),magicCatalog:()=>structuredClone(MAGIC_CATALOG),buyMagic,restoreMagic,infuseMagic,extractMagic,equipMagic,magicProcRate:(key,mult,luk)=>magicProcRate({key},{multiplier:mult},luk),rollMagicTurn:()=>rollMagicTurn(false,derived().luk),mastery:itemId=>{const i=state.inventory.find(x=>x.id===itemId);return i?structuredClone(normalizeMastery(i)):null;},masteryTech:(itemId)=>masteryTechnique(state.inventory.find(x=>x.id===itemId)),gainMastery:()=>{const x=grantBattleMastery();save();render();return x;},stats:()=>derived(),shop:()=>structuredClone(shopCatalog),skills:j=>structuredClone(skills[j||state.activeJob]),reset:()=>{state=createState();save();render();},gainExp:n=>{const r=gainExperience(n);save();render();return r;},setState:s=>{if(!valid(upgradeState(s)))throw Error('invalid state');state=structuredClone(s);save();render();},casino:()=>structuredClone(state.casino),forest:()=>structuredClone(state.forest),forestRecords:()=>structuredClone(state.forest.battleRecords||[]),forestBosses:()=>structuredClone(FOREST_BOSSES),forestDrops:()=>structuredClone(FOREST_BOSS_DROP_TABLES),itemDefinitions:()=>structuredClone(ITEM_CATALOG),goForestFloor:n=>setForestFloor(n),fightForest:n=>run(n,isForestBossFloor(state.forest.floor),'forest'),grow:()=>structuredClone(levelGrowth),pokerResult:cards=>pokerResult(cards),rouletteWin:(c,n,p)=>rouletteWin(c,n,p),fight:n=>run(n),rollSkill:()=>rollSkill(),actions:()=>actionsPerTurn(derived().agi)};
 save();render();
 })();
 </script>
