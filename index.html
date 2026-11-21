@@ -17,11 +17,11 @@
 </style>
 </head>
 <body>
-<main class="shell"><header class="mast"><div><div class="eyebrow">INFINITE ABYSS // PROTOTYPE 0.10</div><h1 class="brand">無限迷宮アビス</h1><div class="subtitle">強くなる理由など、強くなってから考えればいい。</div></div><div class="counter"><span class="chip" id="locationBadge">第1層</span><span class="coin" id="goldBadge">100 G</span></div></header><section class="hero" id="hero"></section><nav class="nav" aria-label="画面切り替え"><button data-tab="explore" class="active">⚔ 探索</button><button data-tab="gear">◇ 装備</button><button data-tab="town">⌂ 拠点</button><button data-tab="jobs">♜ ジョブ</button><button data-tab="record">≡ 記録</button></nav><div id="view" class="page" aria-live="polite"></div><footer class="foot">INSPIRED BY CLASSIC BROWSER RPGS · OFFLINE SINGLE-FILE GAME</footer></main><div class="toast" id="toast" role="status" aria-live="polite"></div><input id="importFile" type="file" accept="application/json,.json" hidden>
+<main class="shell"><header class="mast"><div><div class="eyebrow">INFINITE ABYSS // PROTOTYPE 0.11</div><h1 class="brand">無限迷宮アビス</h1><div class="subtitle">強くなる理由など、強くなってから考えればいい。</div></div><div class="counter"><span class="chip" id="locationBadge">第1層</span><span class="coin" id="goldBadge">100 G</span></div></header><section class="hero" id="hero"></section><nav class="nav" aria-label="画面切り替え"><button data-tab="explore" class="active">⚔ 探索</button><button data-tab="gear">◇ 装備</button><button data-tab="town">⌂ 拠点</button><button data-tab="jobs">♜ ジョブ</button><button data-tab="record">≡ 記録</button></nav><div id="view" class="page" aria-live="polite"></div><footer class="foot">INSPIRED BY CLASSIC BROWSER RPGS · OFFLINE SINGLE-FILE GAME</footer></main><div class="toast" id="toast" role="status" aria-live="polite"></div><input id="importFile" type="file" accept="application/json,.json" hidden>
 <script>
 'use strict';
 (()=>{
-// Infinite Abyss v0.10 — persistent turn-by-turn battle records for Demon Forest.
+// Infinite Abyss v0.11 — job switching preserves attributes, equipment and HP.
 const KEY='infinite-abyss-save-v5';
 const OLD_KEYS=['infinite-abyss-save-v1','infinite-abyss-save-v2','infinite-abyss-save-v3','infinite-abyss-save-v4'];
 const VERSION=5, JOB_CAP=60, MAX_LEVEL=10000;
@@ -188,7 +188,7 @@ function masteryText(item){if(!isMasteryItem(item))return '';
  normalizeMastery(item);
  return `熟練 ${num(item.mastery)} / ${num(item.maxMastery)}（${item.mastery>=item.maxMastery?'MAX':item.masteryXp+'/'+MASTERY_EXP_PER_LEVEL+' EXP'}） · ${masteryTechnique(item)}`;
 }
-function equippedMastery(slot){return normalizeMastery(state.inventory.find(i=>i.id===state.equipped[slot]&&(i.job===state.activeJob||i.job==='all')));}
+function equippedMastery(slot){return normalizeMastery(state.inventory.find(i=>i.id===state.equipped[slot]));}
 function grantBattleMastery(){const gains=[];
  for(const slot of MASTERY_SLOTS){
   const item=equippedMastery(slot);if(!item||item.mastery>=item.maxMastery)continue;
@@ -265,16 +265,24 @@ function readState(){
  return createState();
 }
 let state=readState();let tab=state.location==='casino'?'casino':state.location==='forest'?'forest':'explore',townSection='weapon',lastResult=null,gearFilter='all';
-function save(){try{state.loadouts[state.activeJob]={...state.equipped};localStorage.setItem(KEY,JSON.stringify(state));}catch(e){console.warn('save failed',e);toast('保存に失敗。記録からJSONを出力してください。');}}
+function save(){try{for(const j of jobKeys)state.loadouts[j]={...state.equipped};localStorage.setItem(KEY,JSON.stringify(state));}catch(e){console.warn('save failed',e);toast('保存に失敗。記録からJSONを出力してください。');}}
 function rand(){let x=state.rng>>>0||0x12345678;x^=x<<13;x^=x>>>17;x^=x<<5;state.rng=x>>>0;return state.rng/4294967296;}
 function ri(a,b){return a+Math.floor(rand()*(b-a+1));}
 function randPick(arr){return arr[ri(0,arr.length-1)];}
 function jobAttributes(job,level){const j=jobs[job];return Object.fromEntries(attrs.map((k,i)=>[k,j.base[i]+Math.floor((level-1)*j.growth[i])]));}
+// Current equipment and earned attributes remain unchanged by job switches.
+// A weapon's enhancement follows its own origin, never the active job.
+function enhancedAttribute(item){
+ if(item.slot!=='weapon')return 'vit';
+ const origin=jobs[item.job];
+ if(origin)return origin.mode==='magic'?'mag':'str';
+ return (item.stat?.mag||0)>(item.stat?.str||0)?'mag':'str';
+}
 function derived(){
  const d={...state.baseStats};
- for(const slot of slots){const i=state.inventory.find(i=>i.id===state.equipped[slot]&&(i.job===state.activeJob||i.job==='all'));if(!i)continue;
-  for(const key of attrs)d[key]+=(i.stat[key]||0);
-  if(i.enhance){const target=i.slot==='weapon'?(jobs[state.activeJob].mode==='magic'?'mag':'str'):'vit';d[target]+=i.enhance;}
+ for(const slot of slots){const i=state.inventory.find(i=>i.id===state.equipped[slot]);if(!i)continue;
+  for(const key of attrs)d[key]+=(i.stat?.[key]||0);
+  if(i.enhance)d[enhancedAttribute(i)]+=i.enhance;
  }
  d.maxHP=50+4*d.vit+state.hpGrowth;return d;
 }
@@ -350,10 +358,10 @@ function extractMagic(vesselId,spellId){if(!magicShopAccess())return;
 }
 
 function changeJob(job){if(!jobs[job]||state.activeJob===job)return;
- const old=state.activeJob,ratio=state.hp/derived().maxHP;state.loadouts[old]={...state.equipped};
- state.activeJob=job;state.equipped={...state.loadouts[job]};state.floor=1;
- state.hp=Math.max(1,Math.round(derived().maxHP*ratio));
- logEntry('転職：'+jobs[job].name,jobs[old].name+'から転職。総合Lv維持、職業別スキル・装備を切り替え。');lastResult=null;save();render();toast(jobs[job].name+'に転職！');
+ const old=state.activeJob;
+ state.activeJob=job;state.floor=1;
+ // No equipment swap, HP rebalance, or attribute recalculation on job change.
+ logEntry('転職：'+jobs[job].name,jobs[old].name+'から転職。総合Lv・6能力値・HP・装備を維持。');lastResult=null;save();render();toast(jobs[job].name+'に転職！');
 }
 function monster(f,isBoss=false){const raw=isBoss?boss:randPick(floors[f].foes);const atk=raw[2];return {name:raw[0],hp:raw[1],str:Math.max(3,Math.round(atk/2)+f),mag:Math.max(3,Math.round(atk/3)+f),vit:4+f*2,dex:6+3*f,agi:4+2*f+ri(0,2),luk:5+f*2,exp:raw[3],gold:raw[4],floor:f};}
 function forestMonster(f,isBoss=false){
@@ -492,7 +500,7 @@ function run(count,isBoss=false,dungeon='main'){
  if(!results.length)reason='戦闘前に撤退条件に到達';
  lastResult={results,exp,gold,ore,jobUps,levelUps,surges,misses,dodges,reason,dungeon,masteryTotals:Object.values(masteryTotals),magicTotals};save();render();
 }
-function equip(id){const item=state.inventory.find(x=>x.id===id&&(x.job===state.activeJob||x.job==='all'));if(!item)return;
+function equip(id){const item=state.inventory.find(x=>x.id===id);if(!item)return;
  normalizeMastery(item);
  const before=derived().maxHP;state.equipped[item.slot]=item.id;const after=derived().maxHP;
  state.hp=clamp(state.hp+Math.max(0,after-before),1,after);save();render();toast(item.name+' を装備した');
@@ -516,7 +524,7 @@ function buy(sku){const item=shopCatalog.find(x=>x.sku===sku);if(!item||item.job
 function inn(){if(state.hp>=derived().maxHP){toast('すでに全快');return;}if(state.gold<20){toast('20G不足');return;}
  state.gold-=20;state.hp=derived().maxHP;state.floor=1;logEntry('宿屋','20GでHP全回復');save();render();toast('HP全快！');
 }
-function forge(id){const item=state.inventory.find(i=>i.id===id&&i.job===state.activeJob);if(!item)return;
+function forge(id){const item=state.inventory.find(i=>i.id===id);if(!item)return;
  const n=item.enhance||0,cost=70*(n+1),ore=n>0?n:0;
  if(n>=5||state.gold<cost||state.ore<ore){toast('強化条件を満たしていません');return;}
  const before=derived().maxHP;state.gold-=cost;state.ore-=ore;item.enhance=n+1;
@@ -596,10 +604,10 @@ function exploreHTML(){const f=state.floor,v=floors[f],done=state.kills[f],need=
  ${resultHTML()}<section class="panel"><h3 class="sectiontitle">最近の記録</h3>${state.history.slice(0,5).map(x=>`<div class="log"><strong>${esc(x.headline)}</strong><p>${esc(x.body)}</p></div>`).join('')}</section>`;
 }
 function gearHTML(){const d=derived();const equipped=slots.map(s=>{const i=state.inventory.find(i=>i.id===state.equipped[s]);return `<div class="gear"><div class="slot">${slotName[s]}</div><div class="name">${esc(i?.name||'未装備')}</div><div class="affix">${i?statLine(i.stat)+(i.enhance?' / 強化+'+i.enhance:'')+(isMasteryItem(i)?'<div class="masteryline">'+esc(masteryText(i))+'</div>':''):'補正なし'}</div></div>`;}).join('');
- const items=state.inventory.filter(i=>(i.job===state.activeJob||i.job==='all')&&(gearFilter==='all'||i.slot===gearFilter)).map(i=>{const wearing=state.equipped[i.slot]===i.id;return `<div class="item ${wearing?'equipped':''}"><div><div class="meta">${slotName[i.slot]}</div><h3>${esc(i.name)}${i.enhance?' +'+i.enhance:''}</h3><div class="spec">${statLine(i.stat)}${isMasteryItem(i)?'<div class="masteryline">'+esc(masteryText(i))+'</div>':''}</div></div><div class="itemactions">${wearing?'<span class="tag">装備中</span>':`<button class="btn primary" data-equip="${i.id}">装備</button>${i.devGift||i.casinoSku?'':`<button class="btn ghost" data-sell="${i.id}">売却</button>`}`}</div></div>`;}).join('');
+ const items=state.inventory.filter(i=>(gearFilter==='all'||i.slot===gearFilter)).map(i=>{const wearing=state.equipped[i.slot]===i.id;return `<div class="item ${wearing?'equipped':''}"><div><div class="meta">${slotName[i.slot]}</div><h3>${esc(i.name)}${i.enhance?' +'+i.enhance:''}</h3><div class="spec">${statLine(i.stat)}${isMasteryItem(i)?'<div class="masteryline">'+esc(masteryText(i))+'</div>':''}</div></div><div class="itemactions">${wearing?'<span class="tag">装備中</span>':`<button class="btn primary" data-equip="${i.id}">装備</button>${i.devGift||i.casinoSku?'':`<button class="btn ghost" data-sell="${i.id}">売却</button>`}`}</div></div>`;}).join('');
  return `<section class="panel"><div class="kicker">EQUIPMENT</div><h2 class="sectiontitle">装備構成</h2><p class="intro">武器・胴防具は戦闘終了時に熟練EXPを1〜4獲得し、50EXPで熟練度+1。装備ごとに最大熟練度を保持（通常2000）。熟練50から技が解放され、500で威力・回復効果が上限に達する。</p><div class="geargrid">${equipped}</div><p class="hint">力 ${d.str} / 魔力 ${d.mag} / 生命力 ${d.vit} / 器用さ ${d.dex} / 素早さ ${d.agi} / 運 ${d.luk}</p></section>
  <section class="panel"><div class="kicker">MAGIC EQUIPMENT</div><h3 class="sectiontitle">魔法装備</h3><p class="intro">職業を問わず使用可能。魔法は1ターン最大1回まで自動発動。購入・回復・合成は拠点の魔法店へ。</p><div class="gear"><div class="name">${esc(activeMagicItem()?.name||'未装備')}</div><div class="affix">${activeMagicItem()?.kind==='spell'?`${num(activeMagicItem().uses)} / ${num(activeMagicItem().maxUses)}回`:activeMagicItem()?.kind==='vessel'?spellListForActive().map(x=>esc(x.name)+' '+num(x.uses)+'回').join(' / ')||'空の魔法器':'魔法なし'}</div></div></section>
- <section class="panel"><h3 class="sectiontitle">所持品（${state.inventory.filter(i=>i.job===state.activeJob||i.job==='all').length}件）</h3><div class="filters"><select id="gearFilter"><option value="all">全装備</option>${slots.map(s=>`<option value="${s}" ${gearFilter===s?'selected':''}>${slotName[s]}</option>`).join('')}</select></div><div class="itemlist">${items||'<div class="empty">所持装備なし。拠点の店で購入できる。</div>'}</div></section>`;
+ <section class="panel"><h3 class="sectiontitle">所持品（${state.inventory.length}件）</h3><div class="filters"><select id="gearFilter"><option value="all">全装備</option>${slots.map(s=>`<option value="${s}" ${gearFilter===s?'selected':''}>${slotName[s]}</option>`).join('')}</select></div><div class="itemlist">${items||'<div class="empty">所持装備なし。拠点の店で購入できる。</div>'}</div></section>`;
 }
 function shopHTML(kind){const offers=shopCatalog.filter(i=>i.job===state.activeJob&&i.shop===kind);return `<section class="panel"><div class="kicker">MERCHANT</div><h2 class="sectiontitle">${kind==='weapon'?'武器屋':'防具屋'}</h2><p class="intro">${jobs[state.activeJob].name}向け固定品揃え。全5商品のうち${kind==='weapon'?1:4}商品。ジョブ間の価格・性能差は控えめ。</p>
  <div class="info"><span class="pill gold">${num(state.gold)}G</span><span class="pill">ジョブLv.${state.jobProgress[state.activeJob].level}</span></div>
@@ -635,10 +643,10 @@ function magicShopHTML(){
 
 function townHTML(){return `<section class="panel"><h2 class="sectiontitle">拠点の施設</h2><div class="island-gate"><div><strong>⛵ カジノ島への航路</strong><p class="small muted">ゴールドをメダルに換えて遊ぶ娯楽の島。景品交換所には強力な武器も。</p></div><button class="btn gold" data-travel="casino">カジノ島へ渡る</button></div><div class="island-gate"><div><strong>🌲 魔の森への道</strong><p class="small muted">全50階、10階ごとにボス。進行度は通常迷宮と独立。将来は素材・魔法を掘る場所になる。</p></div><button class="btn primary" data-travel="forest">魔の森へ向かう</button></div><div class="shopnav">${[['weapon','武器屋'],['armor','防具屋'],['magic','魔法店'],['services','宿屋・鍛冶屋']].map(([k,n])=>`<button class="btn ${townSection===k?'primary':''}" data-town="${k}">${n}</button>`).join('')}</div></section>${townSection==='magic'?magicShopHTML():townSection==='services'?servicesHTML():shopHTML(townSection)}`;}
 function jobsHTML(){const cards=jobKeys.map(j=>{const p=state.jobProgress[j],selected=j===state.activeJob;return `<div class="jobcard ${selected?'active':''}"><div class="split"><h3>${jobs[j].name}</h3><span class="pill ${selected?'gold':''}">${selected?'現在のジョブ':'Lv.'+p.level}</span></div><p>${jobs[j].desc}</p><div class="small">ジョブLv ${p.level}/${JOB_CAP} · ${p.level===JOB_CAP?'MAX':'次まで '+num(expNeed(p.level)-p.xp)+' EXP'}</div><div class="progressline"><span style="width:${p.level===JOB_CAP?100:p.xp/expNeed(p.level)*100}%"></span></div><button class="btn ${selected?'':'primary'}" data-job="${j}" ${selected?'disabled':''}>${selected?'選択中':'転職する'}</button><div class="small muted">${jobs[j].passive}</div><details class="skilldetails" ${selected?'open':''}><summary>スキル ${skills[j].filter(s=>s.level<=p.level).length}/5習得</summary><div class="skilllist">${skills[j].map(s=>`<div class="skillentry ${p.level<s.level?'locked':''}"><div class="split"><strong>${s.name}</strong><span class="pill">ジョブLv.${s.level}</span></div><div class="small">威力×${s.power.toFixed(2)} / 基礎発動率${s.rate}%</div><div class="tiny muted">${effectText(s.effect)}</div></div>`).join('')}</div></details></div>`;}).join('');
- return `<section class="panel"><div class="kicker">ADVENTURER GUILD</div><h2 class="sectiontitle">ジョブ・転職</h2><p class="intro">総合Lvは共通。経験値を10獲得したら、総合EXPと現在のジョブEXPに10ずつ加算。ジョブLv60以降はジョブ側のみ切り捨て。スキルは5/15/30/45/60で解放、MPなし。</p><div class="jobcards">${cards}</div><p class="hint">転職時は総合Lvを維持し、HP割合を引き継ぐ。ジョブごとに装備は別管理。武器屋と防具屋も自動で切り替わる。</p></section>`;
+ return `<section class="panel"><div class="kicker">ADVENTURER GUILD</div><h2 class="sectiontitle">ジョブ・転職</h2><p class="intro">総合Lvは共通。経験値を10獲得したら、総合EXPと現在のジョブEXPに10ずつ加算。ジョブLv60以降はジョブ側のみ切り捨て。スキルは5/15/30/45/60で解放、MPなし。</p><div class="jobcards">${cards}</div><p class="hint">転職時は総合Lvを維持し、HP割合を引き継ぐ。転職しても6能力値・HP・装備は変わらない。購入できる武具のラインナップとジョブスキルは職業別。</p></section>`;
 }
 function recordHTML(){return `<section class="panel"><div class="kicker">ADVENTURE JOURNAL</div><h2 class="sectiontitle">冒険記録とセーブ</h2><div class="info"><span class="pill">${num(state.wins)}勝・${state.deaths}敗</span><span class="pill">到達第${state.unlocked}層</span><span class="pill">鉱石${num(state.ore)}</span><span class="pill">魔の森：第${state.forest.unlocked}階</span></div>
- <p class="intro">v0.7セーブを引き継ぎ、魔法店・魔法器システムを追加。v0.6のセーブを維持して熟練度を自動追加。既存セーブの初回移行時のみレーヴァテイン／玄武の鎧（各熟練2000）を付与。セーブはブラウザ内に保存されます。</p><div class="buttonrow"><button class="btn primary" data-action="export">セーブを出力</button><button class="btn" data-action="import">JSONを読込</button><button class="btn danger" data-action="reset">セーブを初期化</button></div>
+ <p class="intro">v0.7セーブを引き継ぎ、魔法店・魔法器システムを追加。v0.6のセーブを維持して熟練度を自動追加。既存セーブの初回移行時のみレーヴァテイン／玄武の鎧（各熟練2000）を付与。v0.11から転職で装備を切り替えず、6能力値とHPを維持します。セーブはブラウザ内に保存されます。</p><div class="buttonrow"><button class="btn primary" data-action="export">セーブを出力</button><button class="btn" data-action="import">JSONを読込</button><button class="btn danger" data-action="reset">セーブを初期化</button></div>
  <hr class="divider"><h3 class="sectiontitle">現行仕様</h3><div class="notice">6能力値：力（物理攻撃）、魔力（魔法攻撃）、生命力（HP成長）、器用さ（命中）、素早さ（回避・ターン行動回数）、運（命中・回避・スキル発動・魔力暴走・乱数報酬）。HPは派生値、MPなし。ATK・DEF・会心率・会心回復など旧補助ステータスは廃止。装備ドロップなし、職業ごとに固定5商品。数値は仮バランス。武器・胴防具に個別熟練度（通常上限2000、50EXPで+1）、熟練技は50ごとに5倍攻撃／最大HP10%回復ずつ成長し、熟練500で50倍／100%に到達。発動率は運の影響なしで一律15%。魔法は別枠で1ターン最大1回。最大5000回・魔法店回復3000回まで。残り799回以下は魔法店では回復・合成不可。</div>
  <p class="intro">v0.9では「魔の森」50階を新設。各10階のボスは再戦可能で、50階の難易度は大幅増。ボス専用の素材・魔法ドロップテーブルは作成済みだが中身は空。実際の素材ドロップや合成は未実装。</p>
  <hr class="divider"><h3 class="sectiontitle">直近の冒険ログ</h3>${state.history.slice(0,50).map(x=>`<div class="log"><div class="date">${esc(x.at)}</div><strong>${esc(x.headline)}</strong><p>${esc(x.body)}</p></div>`).join('')}</section>`;}
