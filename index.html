@@ -12,19 +12,21 @@
 .nav:has([data-tab="casino"]){grid-template-columns:1fr}.island-gate{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0;padding:15px;border:1px solid #89744c;background:linear-gradient(110deg,#403525,#1c2635);border-radius:13px}.island-gate strong{color:#efd59d}.island-gate p{margin:5px 0}.casino-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.casino-nav button{padding:12px 4px;font-size:12px}.casino-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.casino-grid .wide{grid-column:1/-1}.casino-balance{border:1px solid #8d713d;border-radius:13px;padding:13px;background:#342b1b;text-align:center}.casino-balance strong{font-size:28px;display:block;color:#f7cd77}.casino-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0}.casino-controls select,.casino-controls input{background:#0d1829;color:#e4edf8;border:1px solid #53647a;border-radius:8px;padding:10px;min-height:44px}.casino-controls input{width:90px}.poker-cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:13px 0}.poker-card{border:2px solid #4b6380;background:#e5edec;color:#263140;border-radius:10px;min-height:78px;padding:8px 2px;font-size:20px;font-weight:900;text-align:center}.poker-card.held{border-color:#e8c071;background:#fff4cf}.poker-card small{display:block;font-size:9px;margin-top:4px;color:#42566c}.poker-card.red{color:#b63744}.casino-message{padding:13px;background:#152f35;border:1px solid #37515f;border-radius:11px;line-height:1.75;font-size:13px}.prize-item{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid #5c4f40;border-radius:12px;padding:13px;background:#241f2b;margin-top:9px}.prize-item strong{color:#f5cf88}.prize-item p{font-size:11px;color:#afbfce;margin:7px 0}.prize-item button{flex-shrink:0}@media(max-width:600px){.casino-grid{grid-template-columns:1fr}.casino-grid .wide{grid-column:auto}.casino-nav button{font-size:10px;padding:11px 1px}.poker-card{min-height:70px;font-size:18px}.island-gate .btn{width:100%}.prize-item{flex-wrap:wrap}.prize-item button{width:100%}}
 .masteryline{margin-top:6px;padding:7px 8px;border-left:2px solid #ddb66f;background:#272637;color:#f1dbaa;border-radius:4px;font-size:10px;line-height:1.7;overflow-wrap:anywhere}
 .magic-compose{display:grid;grid-template-columns:1fr 1fr auto;align-items:end;gap:9px;margin:13px 0}.magic-compose label{display:grid;gap:5px;color:var(--muted)}.magic-compose select{width:100%;min-width:0;background:#0d1829;color:#e5edf7;border:1px solid #47566d;border-radius:8px;padding:11px;min-height:44px}.magic-compose .btn{white-space:nowrap}.item .spec .btn{font-size:10px;padding:5px 7px;min-height:30px;margin:3px 0}@media(max-width:600px){.magic-compose{grid-template-columns:1fr}.shopnav{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.forest-record-list{display:grid;gap:10px;margin-top:14px}.forest-record-row{border:1px solid #3c536b;border-radius:12px;background:#111e2d;padding:11px;min-width:0}.forest-record-header{display:flex;align-items:center;justify-content:space-between;gap:10px}.forest-record-header>div{min-width:0}.forest-record-header strong{font-size:12px;overflow-wrap:anywhere}.forest-record-header .small{line-height:1.65;margin-top:3px}.forest-record-button{flex:none;min-width:66px;padding:8px 12px}.forest-record-detail{min-width:0}.forest-turn-list{margin-top:12px;display:grid;gap:9px}.forest-turn{background:#172839;border:1px solid #38516b;border-radius:10px;padding:11px;overflow-wrap:anywhere}.forest-turn-head{display:flex;flex-wrap:wrap;align-items:center;gap:7px 13px;padding-bottom:8px;border-bottom:1px solid #3b5266;font-size:11px}.forest-turn-head strong{color:#f0c783;font-size:13px}.forest-turn-head span{color:#b4cadd;font-variant-numeric:tabular-nums}.forest-events{list-style:decimal;margin:8px 0 0;padding-left:23px;font-size:12px;line-height:1.8;color:#dae5f0}.forest-events li{padding:2px 0}.forest-events li::marker{color:#7ecfc7}
 </style>
 </head>
 <body>
-<main class="shell"><header class="mast"><div><div class="eyebrow">INFINITE ABYSS // PROTOTYPE 0.9</div><h1 class="brand">無限迷宮アビス</h1><div class="subtitle">強くなる理由など、強くなってから考えればいい。</div></div><div class="counter"><span class="chip" id="locationBadge">第1層</span><span class="coin" id="goldBadge">100 G</span></div></header><section class="hero" id="hero"></section><nav class="nav" aria-label="画面切り替え"><button data-tab="explore" class="active">⚔ 探索</button><button data-tab="gear">◇ 装備</button><button data-tab="town">⌂ 拠点</button><button data-tab="jobs">♜ ジョブ</button><button data-tab="record">≡ 記録</button></nav><div id="view" class="page" aria-live="polite"></div><footer class="foot">INSPIRED BY CLASSIC BROWSER RPGS · OFFLINE SINGLE-FILE GAME</footer></main><div class="toast" id="toast" role="status" aria-live="polite"></div><input id="importFile" type="file" accept="application/json,.json" hidden>
+<main class="shell"><header class="mast"><div><div class="eyebrow">INFINITE ABYSS // PROTOTYPE 0.10</div><h1 class="brand">無限迷宮アビス</h1><div class="subtitle">強くなる理由など、強くなってから考えればいい。</div></div><div class="counter"><span class="chip" id="locationBadge">第1層</span><span class="coin" id="goldBadge">100 G</span></div></header><section class="hero" id="hero"></section><nav class="nav" aria-label="画面切り替え"><button data-tab="explore" class="active">⚔ 探索</button><button data-tab="gear">◇ 装備</button><button data-tab="town">⌂ 拠点</button><button data-tab="jobs">♜ ジョブ</button><button data-tab="record">≡ 記録</button></nav><div id="view" class="page" aria-live="polite"></div><footer class="foot">INSPIRED BY CLASSIC BROWSER RPGS · OFFLINE SINGLE-FILE GAME</footer></main><div class="toast" id="toast" role="status" aria-live="polite"></div><input id="importFile" type="file" accept="application/json,.json" hidden>
 <script>
 'use strict';
 (()=>{
-// Infinite Abyss v0.9 — 50-floor Demon Forest with five bosses and future drop-table scaffolding.
+// Infinite Abyss v0.10 — persistent turn-by-turn battle records for Demon Forest.
 const KEY='infinite-abyss-save-v5';
 const OLD_KEYS=['infinite-abyss-save-v1','infinite-abyss-save-v2','infinite-abyss-save-v3','infinite-abyss-save-v4'];
 const VERSION=5, JOB_CAP=60, MAX_LEVEL=10000;
 // New dungeon shares character levels, gear and consumables, but not floor progress.
-const FOREST_MAX_FLOOR=50, FOREST_WINS_TO_ADVANCE=3;
+const FOREST_MAX_FLOOR=50, FOREST_WINS_TO_ADVANCE=3, FOREST_RECORD_LIMIT=30;
 const FOREST_BOSSES={
  10:{name:'森喰らいの巨鹿',hp:5000,str:85,dex:52,agi:35,luk:28,exp:750,gold:650},
  20:{name:'腐根の女王',hp:23000,str:155,dex:94,agi:53,luk:45,exp:2500,gold:1850},
@@ -204,7 +206,7 @@ function createState(){return {version:VERSION,activeJob:'mage',level:1,xp:0,hpG
  rng:0xAB155005,nextId:1,masterySchema:MASTERY_SCHEMA,magicSchema:MAGIC_SCHEMA,magics:[],equippedMagic:null,jobProgress:freshJobs(),loadouts:Object.fromEntries(jobKeys.map(j=>[j,blankSlots()])),inventory:[],equipped:blankSlots(),
  forest:makeForest(),history:[{id:0,headline:'新しい冒険',body:'6能力値・職業育成・カジノ島・装備熟練・魔法へようこそ。',at:'冒険開始'}]};}
 function makeCasino(){return {poker:null,last:'',plays:0,purchased:[],materials:[]};}
-function makeForest(){return {floor:1,unlocked:1,kills:{},bossesDefeated:{}};}
+function makeForest(){return {floor:1,unlocked:1,kills:{},bossesDefeated:{},battleRecords:[]};}
 function normalizeForest(s){
  if(!s.forest||typeof s.forest!=='object')s.forest=makeForest();
  const f=s.forest;
@@ -212,6 +214,8 @@ function normalizeForest(s){
  f.floor=clamp(Number.isInteger(f.floor)?f.floor:1,1,f.unlocked);
  if(!f.kills||typeof f.kills!=='object'||Array.isArray(f.kills))f.kills={};
  if(!f.bossesDefeated||typeof f.bossesDefeated!=='object'||Array.isArray(f.bossesDefeated))f.bossesDefeated={};
+ if(!Array.isArray(f.battleRecords))f.battleRecords=[];
+ if(f.battleRecords.length>FOREST_RECORD_LIMIT)f.battleRecords=f.battleRecords.slice(0,FOREST_RECORD_LIMIT);
  return f;
 }
 function upgradeState(s){if(!s||s.version!==VERSION||!jobs[s.activeJob])return s;
@@ -364,28 +368,33 @@ function forestMonster(f,isBoss=false){
  const name=FOREST_FOE_NAMES[ri(0,FOREST_FOE_NAMES.length-1)];
  return {name:'第'+f+'階・'+name,hp:Math.round(baseHp*(.90+rand()*.20)),str:Math.round(power*.66),mag:Math.round(power*.57),vit:8+f*2,dex:9+f*3,agi:7+f*2+ri(0,3),luk:6+f*2,exp:Math.round(14+f*11+f*f*.4),gold:Math.round(12+f*8+f*f*.2),floor:f,forest:true,boss:false};
 }
-function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?forestMonster(f,isBoss):monster(f,isBoss);let hp=foe.hp,rounds=0,damage=0,heal=0,misses=0,dodges=0,surges=0,actions=[],failed=false;const skillUses={},magicUses={};let beerUsed=false,beerActive=false;
+function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?forestMonster(f,isBoss):monster(f,isBoss);let hp=foe.hp,rounds=0,damage=0,heal=0,misses=0,dodges=0,surges=0,actions=[],turnLogs=[],failed=false;const skillUses={},magicUses={};let beerUsed=false,beerActive=false;
  const recover=n=>{const got=clamp(Math.floor(n),0,derived().maxHP-state.hp);state.hp+=got;heal+=got;return got;};
  while(hp>0&&rounds<120){rounds++;
+  const turnInfo=dungeon==='forest'?{turn:rounds,playerHpBefore:state.hp,enemyHpBefore:hp,playerHpAfter:state.hp,enemyHpAfter:hp,events:[]}:null;
+  if(turnInfo)turnLogs.push(turnInfo);
+  const record=message=>{if(actions.length<20)actions.push(message);if(turnInfo)turnInfo.events.push(String(message).replace(/^T\d+\s*/,''));};
+  try{
   const d=derived();const attacks=actionsPerTurn(d.agi);let stopped=false,guard=0;
+  if(turnInfo)record('行動回数：'+attacks+'回');
   // ONE magic cast per turn, regardless of agility and the number of attack actions.
   const cast=rollMagicTurn(beerUsed,d.luk);
   if(cast){
    cast.uses--;magicUses[cast.name]=(magicUses[cast.name]||0)+1;
    if(cast.key==='fire'){
     const before=hp;hp=Math.max(0,hp-500);
-    if(actions.length<20)actions.push('T'+rounds+'【ファイアー】固定'+Math.min(before,500)+'ダメージ（残'+cast.uses+'回）');
+    record('T'+rounds+'【ファイアー】固定'+Math.min(before,500)+'ダメージ（残'+cast.uses+'回）');
    }else if(cast.key==='heal'){
     const gained=recover(300);
-    if(actions.length<20)actions.push('T'+rounds+'【ヒール】HP+'+gained+'（残'+cast.uses+'回）');
+    record('T'+rounds+'【ヒール】HP+'+gained+'（残'+cast.uses+'回）');
    }else if(cast.key==='beer'){
     beerUsed=true;beerActive=true;
-    if(actions.length<20)actions.push('T'+rounds+'【ビール】命中率半減・最終攻撃×1.2（残'+cast.uses+'回）');
+    record('T'+rounds+'【ビール】命中率半減・最終攻撃×1.2（残'+cast.uses+'回）');
    }
   }
   if(hp<=0)break;
   for(let a=0;a<attacks&&hp>0;a++){
-   if(rand()*100>=accuracy(d.dex,foe.agi,d.luk,foe.luk)*(beerActive?.5:1)){misses++;if(actions.length<20)actions.push('T'+rounds+' 命中失敗');continue;}
+   if(rand()*100>=accuracy(d.dex,foe.agi,d.luk,foe.luk)*(beerActive?.5:1)){misses++;record('T'+rounds+' 命中失敗');continue;}
    const sk=rollSkill();if(sk){skillUses[sk.name]=(skillUses[sk.name]||0)+1;}
    const raw=jobs[state.activeJob].mode==='magic'?d.mag:d.str;
    const variance=.90+rand()*.20+Math.min(.06,d.luk/700);
@@ -402,20 +411,21 @@ function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?fo
    if(sk?.effect?.type==='drain')extra=' / HP吸収+'+recover(dealt*sk.effect.value/100);
    if(sk?.effect?.type==='stun')stopped=true;
    if(sk?.effect?.type==='guard')guard=Math.max(guard,sk.effect.value);
-   if(actions.length<20)actions.push('T'+rounds+' '+(sk?'【'+sk.name+'】':'通常攻撃')+(surged?'［魔力暴走］':'')+(masteryStrike?'［極撃×'+(weaponTier*5)+'］':'')+' '+hit+'ダメージ'+extra);
+   record('T'+rounds+' '+(sk?'【'+sk.name+'】':'通常攻撃')+(surged?'［魔力暴走］':'')+(masteryStrike?'［極撃×'+(weaponTier*5)+'］':'')+' '+hit+'ダメージ'+extra);
   }
   if(hp<=0)break;
-  if(stopped){if(actions.length<20)actions.push('反撃を阻止');continue;}
+  if(stopped){record('反撃を阻止');continue;}
   const d2=derived();
-  if(rand()*100>=accuracy(foe.dex,d2.agi,foe.luk,d2.luk)){dodges++;if(actions.length<20)actions.push('回避成功！');continue;}
+  if(rand()*100>=accuracy(foe.dex,d2.agi,foe.luk,d2.luk)){dodges++;record('回避成功！');continue;}
   let enemyHit=Math.max(1,Math.round((4+foe.str*1.35+(dungeon==='forest'?f*3:f*2))*(.90+rand()*.20)));
   if(guard)enemyHit=Math.max(1,Math.ceil(enemyHit*(1-guard/100)));
   state.hp-=enemyHit;damage+=enemyHit;
   const armor=equippedMastery('body'),armorTier=masteryTier(armor);
   const masteryHeal=state.hp>0&&armorTier>0&&rand()*100<MASTERY_TECH_RATE;
   const recovered=masteryHeal?recover(Math.ceil(derived().maxHP*armorTier*.10)):0;
-  if(actions.length<20)actions.push('敵の攻撃 '+enemyHit+'ダメージ'+(masteryHeal?'［再生：HP+'+recovered+'］':''));
+  record('敵の攻撃 '+enemyHit+'ダメージ'+(masteryHeal?'［再生：HP+'+recovered+'］':''));
   if(state.hp<=0){failed=true;break;}
+  }finally{if(turnInfo){turnInfo.playerHpAfter=state.hp;turnInfo.enemyHpAfter=hp;}}
  }
  if(hp>0&&rounds>=120)failed=true;
  state.battleCount++;
@@ -424,7 +434,7 @@ function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?fo
   if(dungeon==='forest')state.forest.floor=1;else state.floor=1;
   state.hp=Math.max(1,Math.ceil(derived().maxHP*.25));
   logEntry('敗北：'+foe.name,(dungeon==='forest'?'魔の森の入口':'拠点')+'へ救出。'+loss+'Gを失った。');
-  return {name:foe.name,win:false,rounds,damage,heal,misses,dodges,surges,actions,skillUses,magicUses,masteryGains,exp:0,gold:0,ore:0};}
+  return {name:foe.name,win:false,rounds,damage,heal,misses,dodges,surges,actions,turnLogs,skillUses,magicUses,masteryGains,exp:0,gold:0,ore:0};}
  state.wins++;
  if(dungeon==='forest'){
   const forest=state.forest;
@@ -450,7 +460,7 @@ function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?fo
  const magicLog=Object.entries(magicUses).map(([n,v])=>n+'×'+v).join('、');
  const masteryLog=masteryGains.map(x=>x.name+' 熟練EXP+'+x.exp+(x.levels?'／熟練+'+x.levels:'')).join('、');
  logEntry((isBoss?'ボス撃破：':'勝利：')+foe.name,(dungeon==='forest'?'魔の森 第'+f+'階 / ':'')+rounds+'ターン / EXP+'+foe.exp+' / '+gold+'G'+(skLog?' / '+skLog:'')+(magicLog?' / 魔法：'+magicLog:'')+(ore?' / 鉱石+'+ore:'')+(masteryLog?' / '+masteryLog:''));
- return {name:foe.name,win:true,rounds,damage,heal,misses,dodges,surges,skillUses,magicUses,masteryGains,actions,exp:foe.exp,gold,ore,levelUps:levels.general,jobUps:levels.job};
+ return {name:foe.name,win:true,rounds,damage,heal,misses,dodges,surges,skillUses,magicUses,masteryGains,actions,turnLogs,exp:foe.exp,gold,ore,levelUps:levels.general,jobUps:levels.job};
 }
 function run(count,isBoss=false,dungeon='main'){
  if(dungeon==='forest'){
@@ -468,6 +478,11 @@ function run(count,isBoss=false,dungeon='main'){
  for(let i=0;i<count;i++){
   if(state.hp<=retreat){reason='撤退条件に到達';break;}
   const r=fightOne(floor,isBoss,dungeon);results.push(r);
+  if(dungeon==='forest'){
+   const entry={id:state.battleCount,floor,isBoss,name:r.name,win:r.win,rounds:r.rounds,damage:r.damage,heal:r.heal,exp:r.exp,gold:r.gold,turns:r.turnLogs||[]};
+   state.forest.battleRecords.unshift(entry);
+   if(state.forest.battleRecords.length>FOREST_RECORD_LIMIT)state.forest.battleRecords.length=FOREST_RECORD_LIMIT;
+  }
   exp+=r.exp;gold+=r.gold;ore+=r.ore;levelUps+=r.levelUps||0;jobUps+=r.jobUps||0;surges+=r.surges;misses+=r.misses;dodges+=r.dodges;
   for(const [name,n] of Object.entries(r.magicUses||{}))magicTotals[name]=(magicTotals[name]||0)+n;
   for(const g of r.masteryGains||[]){const k=g.id;if(!masteryTotals[k])masteryTotals[k]={name:g.name,exp:0,levels:0};masteryTotals[k].exp+=g.exp;masteryTotals[k].levels+=g.levels;}
@@ -513,6 +528,28 @@ function setForestFloor(n){
  if(state.location!=='forest'||!Number.isInteger(n)||n<1||n>state.forest.unlocked)return;
  state.forest.floor=n;lastResult=null;save();render();
 }
+// Forest records are persisted in the normal save. Full turn details are rendered only on tap,
+// so 30 recorded fights do not create thousands of hidden elements on mobile.
+function forestRecordsHTML(){
+ const entries=state.forest.battleRecords||[];
+ return `<section class="panel" id="forestRecords"><div class="split"><h3 class="sectiontitle">魔の森の戦闘記録</h3><span class="pill">直近 ${entries.length} / ${FOREST_RECORD_LIMIT} 戦</span></div>
+ <p class="hint">各戦闘の「記録」をタップすると、全ターンの行動順・HP変化・スキル・魔法・熟練技を表示します。戦闘後や再読み込み後にも閲覧できます。v0.10以前の戦闘には詳細がありません。</p>
+ <div class="forest-record-list">${entries.map(r=>`<div class="forest-record-row"><div class="forest-record-header"><div><strong>#${num(r.id)} 第${r.floor}階 ${esc(r.name)}</strong><div class="small muted">${r.isBoss?'ボス / ':''}${r.win?'勝利':'敗北'} · ${r.rounds}ターン · 被ダメ ${num(r.damage)} · EXP +${num(r.exp||0)}</div></div><button class="btn forest-record-button" data-forestrecord="${r.id}" aria-expanded="false">記録</button></div><div class="forest-record-detail" id="forest-record-${r.id}"></div></div>`).join('')||'<div class="empty">魔の森で戦闘すると、ここにターンごとの記録が残ります。</div>'}</div></section>`;
+}
+function forestBattleDetailHTML(r){
+ if(!r||!Array.isArray(r.turns))return '<div class="empty">この戦闘の詳細記録はありません。</div>';
+ return `<div class="forest-turn-list"><p class="hint">#${num(r.id)} · 第${r.floor}階 · ${esc(r.name)} · ${r.win?'勝利':'敗北'}（全${r.rounds}ターン）</p>
+ ${r.turns.map(t=>`<div class="forest-turn"><div class="forest-turn-head"><strong>ターン ${num(t.turn)}</strong><span>自HP ${num(t.playerHpBefore)} → ${num(t.playerHpAfter)}</span><span>敵HP ${num(t.enemyHpBefore)} → ${num(t.enemyHpAfter)}</span></div><ol class="forest-events">${(t.events||[]).map(e=>`<li>${esc(e)}</li>`).join('')}</ol></div>`).join('')||'<div class="empty">ターンの記録がありません</div>'}</div>`;
+}
+function toggleForestRecord(id){
+ if(state.location!=='forest')return;
+ const r=(state.forest.battleRecords||[]).find(x=>x.id===id),target=document.getElementById('forest-record-'+id);
+ if(!r||!target)return;
+ const opening=!target.hasChildNodes();
+ document.querySelectorAll('.forest-record-detail').forEach(el=>{if(el!==target)el.replaceChildren();});
+ document.querySelectorAll('[data-forestrecord]').forEach(button=>{button.setAttribute('aria-expanded',String(opening&&Number(button.dataset.forestrecord)===id));button.textContent=opening&&Number(button.dataset.forestrecord)===id?'閉じる':'記録';});
+ if(opening)target.innerHTML=forestBattleDetailHTML(r);else target.replaceChildren();
+}
 function forestHTML(){
  const forest=state.forest,f=forest.floor,bossFloor=isForestBossFloor(f),def=FOREST_BOSSES[f];
  const band=Math.floor((f-1)/10),start=band*10+1;
@@ -530,7 +567,7 @@ function forestHTML(){
  <div class="controls"><label class="controlgroup small">撤退HP <input id="retreat" class="input" type="number" min="0" value="40"></label><span class="controlnote">戦闘前後に判定。敗北すると入口（1階）へ戻る。</span></div>
  <div class="buttonrow">${bossFloor?`<button class="btn gold" data-forestboss="1">${bossCleared?'ボスと再戦':'ボスに挑戦'}</button>`:[1,5,10,20,30].map(n=>`<button class="btn ${n===10?'primary':''}" data-forestfight="${n}">${n}戦</button>`).join('')}${canAdvance?`<button class="btn primary" data-forestfloor="${f+1}">次の${f+1}階へ</button>`:''}</div>
  <p class="hint">ボスごとに「アイテム」「魔法」のドロップテーブルを定義済み。中身は未設定で、素材・魔法の実ドロップや武具合成は今後実装する。</p>
- </section>${resultHTML()}<section class="panel"><h3 class="sectiontitle">魔の森の記録</h3>${state.history.filter(h=>h.body.includes('魔の森')||h.headline.includes('魔の森')).slice(0,5).map(h=>`<div class="log"><strong>${esc(h.headline)}</strong><p>${esc(h.body)}</p></div>`).join('')||'<div class="empty">初めての魔の森を探索しよう</div>'}</section>`;
+ </section>${resultHTML()}${forestRecordsHTML()}`;
 }
 function renderHero(){const d=derived(),p=state.jobProgress[state.activeJob],max=expNeed(state.level);
  $('#hero').innerHTML=`<div class="herohead"><div><div class="job">${jobs[state.activeJob].eng} · JOB Lv.${p.level}/${JOB_CAP}</div><h2>名もなき${jobs[state.activeJob].name}</h2><div class="subtitle">6能力値システム · Lv.${state.level} · ${jobs[state.activeJob].mode==='magic'?'魔法攻撃':'物理攻撃'}</div></div><div class="level">${state.level}<small>総合 LEVEL</small></div></div>
@@ -544,7 +581,7 @@ function renderHero(){const d=derived(),p=state.jobProgress[state.activeJob],max
 function resultHTML(){if(!lastResult)return '';
  const r=lastResult;return `<section class="result" id="lastResult"><div class="kicker">AUTO BATTLE RESULTS</div><h3>${esc(r.reason)}</h3><div class="resultgrid">${[
  [r.results.filter(x=>x.win).length+'/'+r.results.length,'勝利 / 戦闘'],['+'+num(r.exp),'EXP'],['+'+num(r.gold)+' G','獲得G'],[r.surges,'魔力暴走'],[r.misses,'攻撃ミス'],[r.dodges,'回避成功']
- ].map(([v,k])=>`<div class="metric"><b>${v}</b><small>${k}</small></div>`).join('')}</div><hr class="divider"><div class="small">総合LvUP +${r.levelUps} / ジョブLvUP +${r.jobUps} / 鉱石 +${r.ore} / ${r.dungeon==='forest'?'素材・魔法ドロップなし（空テーブル）':'装備ドロップなし'}</div><div class="small" style="margin-top:8px">${r.masteryTotals.length?r.masteryTotals.map(x=>esc(x.name)+' 熟練EXP +'+x.exp+(x.levels?'（熟練+'+x.levels+'）':'')).join(' / '):'熟練EXP：獲得対象なし・上限到達'}</div><div class="small" style="margin-top:8px">魔法：${Object.keys(r.magicTotals||{}).length?Object.entries(r.magicTotals).map(([n,c])=>esc(n)+'×'+c).join(' / '):'発動なし'}</div><details style="margin-top:12px"><summary class="small muted">戦闘の内訳</summary>${r.results.map((b,i)=>`<p class="small" style="line-height:1.75"><strong>#${state.battleCount-r.results.length+i+1} ${esc(b.name)}</strong> / ${b.win?'勝利':'敗北'} / ${b.rounds}T / 被ダメ${b.damage}<span class="muted tiny" style="display:block">${esc(b.actions.join(' ／ '))}</span></p>`).join('')}</details></section>`;
+ ].map(([v,k])=>`<div class="metric"><b>${v}</b><small>${k}</small></div>`).join('')}</div><hr class="divider"><div class="small">総合LvUP +${r.levelUps} / ジョブLvUP +${r.jobUps} / 鉱石 +${r.ore} / ${r.dungeon==='forest'?'素材・魔法ドロップなし（空テーブル）':'装備ドロップなし'}</div><div class="small" style="margin-top:8px">${r.masteryTotals.length?r.masteryTotals.map(x=>esc(x.name)+' 熟練EXP +'+x.exp+(x.levels?'（熟練+'+x.levels+'）':'')).join(' / '):'熟練EXP：獲得対象なし・上限到達'}</div><div class="small" style="margin-top:8px">魔法：${Object.keys(r.magicTotals||{}).length?Object.entries(r.magicTotals).map(([n,c])=>esc(n)+'×'+c).join(' / '):'発動なし'}</div>${r.dungeon==='forest'?'<p class="hint">下の「魔の森の戦闘記録」から各戦闘の「記録」をタップすると、全ターンの処理を確認できます。</p>':`<details style="margin-top:12px"><summary class="small muted">戦闘の内訳</summary>${r.results.map((b,i)=>`<p class="small" style="line-height:1.75"><strong>#${state.battleCount-r.results.length+i+1} ${esc(b.name)}</strong> / ${b.win?'勝利':'敗北'} / ${b.rounds}T / 被ダメ${b.damage}<span class="muted tiny" style="display:block">${esc(b.actions.join(' ／ '))}</span></p>`).join('')}</details>`}</section>`;
 }
 function exploreHTML(){const f=state.floor,v=floors[f],done=state.kills[f],need=v.need,available=state.unlocked;
  return `<section class="panel"><div class="kicker">DUNGEON SELECT</div><h2 class="sectiontitle">迷宮を探索する</h2>
@@ -786,6 +823,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||
  if(b.dataset.cas=== 'poker-draw'){drawPoker();return;}
  if(b.dataset.cas=== 'roulette'){playRoulette();return;}
  if(b.dataset.cas=== 'racing'){playRacing();return;}
+ if(b.dataset.forestrecord){toggleForestRecord(Number(b.dataset.forestrecord));return;}
  if(b.dataset.forestfloor){setForestFloor(Number(b.dataset.forestfloor));return;}
  if(b.dataset.forestfight){run(Number(b.dataset.forestfight),false,'forest');return;}
  if(b.dataset.forestboss){run(1,true,'forest');return;}
@@ -806,7 +844,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||
  switch(b.dataset.action){case 'inn':inn();break;case 'export':exportSave();break;case 'import':$('#importFile').click();break;case 'reset':if(confirm('本当にセーブを全消去してLv.1から始めますか？')){state=createState();tab='explore';lastResult=null;save();render();toast('初期化しました');}break;}
 });
 document.addEventListener('change',e=>{if(e.target.id==='gearFilter'){gearFilter=e.target.value;render();}if(e.target.id==='importFile'){importSave(e.target.files?.[0]);e.target.value='';}});
-window.ABYSS_DEBUG={state:()=>structuredClone(state),magicCatalog:()=>structuredClone(MAGIC_CATALOG),buyMagic,restoreMagic,infuseMagic,extractMagic,equipMagic,magicProcRate:(key,mult,luk)=>magicProcRate({key},{multiplier:mult},luk),rollMagicTurn:()=>rollMagicTurn(false,derived().luk),mastery:itemId=>{const i=state.inventory.find(x=>x.id===itemId);return i?structuredClone(normalizeMastery(i)):null;},masteryTech:(itemId)=>masteryTechnique(state.inventory.find(x=>x.id===itemId)),gainMastery:()=>{const x=grantBattleMastery();save();render();return x;},stats:()=>derived(),shop:()=>structuredClone(shopCatalog),skills:j=>structuredClone(skills[j||state.activeJob]),reset:()=>{state=createState();save();render();},gainExp:n=>{const r=gainExperience(n);save();render();return r;},setState:s=>{if(!valid(upgradeState(s)))throw Error('invalid state');state=structuredClone(s);save();render();},casino:()=>structuredClone(state.casino),forest:()=>structuredClone(state.forest),forestBosses:()=>structuredClone(FOREST_BOSSES),forestDrops:()=>structuredClone(FOREST_BOSS_DROP_TABLES),itemDefinitions:()=>structuredClone(ITEM_CATALOG),goForestFloor:n=>setForestFloor(n),fightForest:n=>run(n,isForestBossFloor(state.forest.floor),'forest'),grow:()=>structuredClone(levelGrowth),pokerResult:cards=>pokerResult(cards),rouletteWin:(c,n,p)=>rouletteWin(c,n,p),fight:n=>run(n),rollSkill:()=>rollSkill(),actions:()=>actionsPerTurn(derived().agi)};
+window.ABYSS_DEBUG={state:()=>structuredClone(state),magicCatalog:()=>structuredClone(MAGIC_CATALOG),buyMagic,restoreMagic,infuseMagic,extractMagic,equipMagic,magicProcRate:(key,mult,luk)=>magicProcRate({key},{multiplier:mult},luk),rollMagicTurn:()=>rollMagicTurn(false,derived().luk),mastery:itemId=>{const i=state.inventory.find(x=>x.id===itemId);return i?structuredClone(normalizeMastery(i)):null;},masteryTech:(itemId)=>masteryTechnique(state.inventory.find(x=>x.id===itemId)),gainMastery:()=>{const x=grantBattleMastery();save();render();return x;},stats:()=>derived(),shop:()=>structuredClone(shopCatalog),skills:j=>structuredClone(skills[j||state.activeJob]),reset:()=>{state=createState();save();render();},gainExp:n=>{const r=gainExperience(n);save();render();return r;},setState:s=>{if(!valid(upgradeState(s)))throw Error('invalid state');state=structuredClone(s);save();render();},casino:()=>structuredClone(state.casino),forest:()=>structuredClone(state.forest),forestRecords:()=>structuredClone(state.forest.battleRecords||[]),forestBosses:()=>structuredClone(FOREST_BOSSES),forestDrops:()=>structuredClone(FOREST_BOSS_DROP_TABLES),itemDefinitions:()=>structuredClone(ITEM_CATALOG),goForestFloor:n=>setForestFloor(n),fightForest:n=>run(n,isForestBossFloor(state.forest.floor),'forest'),grow:()=>structuredClone(levelGrowth),pokerResult:cards=>pokerResult(cards),rouletteWin:(c,n,p)=>rouletteWin(c,n,p),fight:n=>run(n),rollSkill:()=>rollSkill(),actions:()=>actionsPerTurn(derived().agi)};
 save();render();
 })();
 </script>
