@@ -1,4 +1,4 @@
-# 技術設計・セーブ・検証（v0.21）
+# 技術設計・セーブ・検証（v0.22）
 
 > この文書は開発者／Codex向け。ソースの真実はルート `index.html`。変更時に差分を確認して更新する。
 
@@ -122,3 +122,13 @@ UI専用の `uiSection`、`buildTab`、`moreTab`、各折りたたみ状態は**
 - `tab` の互換値は維持。魔法店は `state.location==='main' && tab==='town' && townSection==='magic'` の判定に依存する。
 - 既存セーブキー `infinite-abyss-save-v5`、`VERSION=5`、ゲームの能力値・装備・ジョブ等に変更なし。
 - 375/390/430pxのChromiumで画面遷移と滞在維持、10戦自動周回、JSONセーブ復元を回帰テスト済み。
+
+## v0.22 通常迷宮の深層と移行
+
+- `MAIN_MAX_FLOOR=50`、`MAIN_DEEP_START=6`。既存の `floors[1..5]` と第5層 `boss` を変更しない。
+- `MAIN_FAMILIES`（20種族）と `MAIN_PHASES`（10環境）から **`MAIN_DEEP_MONSTERS` 200件**を作り、`floors[6..50]` に各4〜5種を割り当てる。詳細は [通常迷宮200種台帳](normal-dungeon-monsters.md)。
+- 旧セーブ移行時は `state.kills` の1〜50層の不足キーのみ追加し、**既存の各層討伐数は上書きしない**。`bossDefeated===true` の場合に限り `unlocked` を最低6へ拡張。`state.floor` は1〜解放済み範囲に補正。
+- 新規セーブにも `kills` 1〜50の初期値0を用意。`KEY='infinite-abyss-save-v5'`、`VERSION=5` は変更なし。
+- 図鑑の旧19件のIDは維持し、その後に新200件の `main:foe:名前` を追加。現在の収録数は**通常迷宮219・魔の森11・異世界26＝256件**。セーブ済みの戦績を創作・二重加算しない。
+- 通常迷宮のUIに `mainFloorBand`、図鑑に `codexMainBand` を追加（各10層の表示のみ。**UI一時状態はセーブしない**）。最大50層を一度に表示しない。
+- 回帰テスト：200件の名前/ID重複なし、各層4〜5種、図鑑256種、最高層の敵が異世界の通常ボス下限を下回ること、旧ボス討伐済みデータの第6層解放、50層の勝利と図鑑記録、iPhone幅、5戦自動周回。
