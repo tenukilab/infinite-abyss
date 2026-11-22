@@ -32,14 +32,16 @@
 </style>
 </head>
 <body>
-<main class="shell"><header class="mast"><div><div class="eyebrow">INFINITE ABYSS // PROTOTYPE 0.16</div><h1 class="brand">無限迷宮アビス</h1><div class="subtitle">強くなる理由など、強くなってから考えればいい。</div></div><div class="counter"><span class="chip" id="locationBadge">第1層</span><span class="coin" id="goldBadge">100 G</span></div></header><section class="hero" id="hero"></section><nav class="nav" aria-label="画面切り替え"><button data-tab="explore" class="active">⚔ 探索</button><button data-tab="gear">◇ 装備</button><button data-tab="town">⌂ 拠点</button><button data-tab="jobs">♜ ジョブ</button><button data-tab="record">≡ 記録</button></nav><div id="view" class="page" aria-live="polite"></div><footer class="foot">INSPIRED BY CLASSIC BROWSER RPGS · OFFLINE SINGLE-FILE GAME</footer></main><div class="toast" id="toast" role="status" aria-live="polite"></div><input id="importFile" type="file" accept="application/json,.json" hidden>
+<main class="shell"><header class="mast"><div><div class="eyebrow">INFINITE ABYSS // PROTOTYPE 0.17</div><h1 class="brand">無限迷宮アビス</h1><div class="subtitle">強くなる理由など、強くなってから考えればいい。</div></div><div class="counter"><span class="chip" id="locationBadge">第1層</span><span class="coin" id="goldBadge">100 G</span></div></header><section class="hero" id="hero"></section><nav class="nav" aria-label="画面切り替え"><button data-tab="explore" class="active">⚔ 探索</button><button data-tab="gear">◇ 装備</button><button data-tab="town">⌂ 拠点</button><button data-tab="jobs">♜ ジョブ</button><button data-tab="record">≡ 記録</button></nav><div id="view" class="page" aria-live="polite"></div><footer class="foot">INSPIRED BY CLASSIC BROWSER RPGS · OFFLINE SINGLE-FILE GAME</footer></main><div class="toast" id="toast" role="status" aria-live="polite"></div><input id="importFile" type="file" accept="application/json,.json" hidden>
 <script>
 'use strict';
 (()=>{
-// Infinite Abyss v0.16 — seven master-gated advanced jobs. Auto expedition preserved.
+// Infinite Abyss v0.17 — Otherworld bosses, Pīruna the cat, and 150-turn retreats.
 const KEY='infinite-abyss-save-v5';
 const OLD_KEYS=['infinite-abyss-save-v1','infinite-abyss-save-v2','infinite-abyss-save-v3','infinite-abyss-save-v4'];
 const VERSION=5, JOB_CAP=60, MAX_LEVEL=10000;
+const BATTLE_TURN_LIMIT=150, TIMEOUT_EXP_RATE=.70, PEELUNA_HIT_RATE=.001; // Percentage, NOT probability fraction.
+const PEELUNA_SPAWN_RATE=.0001, PEELUNA_PUNCH_RATE=.0005; // 0.01% per encounter, 0.05% per turn.
 // New dungeon shares character levels, gear and consumables, but not floor progress.
 const FOREST_MAX_FLOOR=50, FOREST_WINS_TO_ADVANCE=3, FOREST_RECORD_LIMIT=30;
 const BOSS_BERSERK_HP_RATE=.5, BOSS_BERSERK_DAMAGE_MULTIPLIER=1.5;
@@ -60,6 +62,63 @@ const FOREST_FOE_NAMES=['瘴気の小鬼','樹皮の獣','迷い森の亡霊','�
 // Boss-specific item and spell drop tables exist, but NO drops are rolled yet.
 const ITEM_CATALOG={};
 const FOREST_BOSS_DROP_TABLES=Object.fromEntries(Object.keys(FOREST_BOSSES).map(k=>[k,{items:[],magics:[]} ]));
+// The Otherworld has NO floors. Each challenge rolls one of 26 independent bosses.
+// Abilities use a shared effect engine. Numbers and drop rarity tiers are provisional.
+const ISEKAI_MAGIC_DROP_RATE=.01, ISEKAI_RECORD_LIMIT=30, ISEKAI_DROP_USES=3000;
+const ISEKAI_ROSTER=[
+ ['毒沼の女帝','毒・回復封じ',11000000,4600,[['poison',.45,3],['healSeal',.30,3]]],
+ ['断罪の雷帝','麻痺・必殺',13000000,5300,[['paralysis',.22,1],['heavy',.22,9]]],
+ ['千眼の偽神','暗闇・弱体化',12500000,4500,[['blind',.48,3],['weaken',.40,3]]],
+ ['虚無の修道士','魔法封印・魔力搾取',10000000,4400,[['magicSeal',.50,3],['siphon',.35,8]]],
+ ['血染めの騎皇','出血・脆弱',16000000,5500,[['bleed',.48,3],['frail',.42,2]]],
+ ['亡骸の錬金王','防御破壊・重撃',14000000,4900,[['armorBreak',.47,3],['heavy',.23,6]]],
+ ['星屑の巨人','高火力・怒り',19000000,6000,[['heavy',.30,10],['fury',.33,1.8]]],
+ ['時喰いの魔女','鈍足・麻痺',11500000,4600,[['slow',.50,3],['paralysis',.19,1]]],
+ ['不死の樹神','再生・吸血',17000000,4300,[['regen',.36,.05],['leech',.45,.65]]],
+ ['煉獄の審判者','貫通ダメージ・大技',14500000,6200,[['trueStrike',.24,.30],['heavy',.27,8]]],
+ ['黒翼の司祭','回復封じ・猛毒',13000000,5100,[['healSeal',.55,4],['poison',.43,3]]],
+ ['魔石喰らいの竜','ウォール破壊・一撃',20500000,5900,[['wallCrush',.55,.75],['heavy',.28,9]]],
+ ['鏡面の傀儡','弱体化・暗闇',12000000,4500,[['weaken',.52,3],['blind',.43,3]]],
+ ['忘却の司書','魔法封印・鈍足',10000000,4100,[['magicSeal',.53,4],['slow',.42,3]]],
+ ['宵闇の皇女','失明・麻痺',12500000,4900,[['blind',.58,3],['paralysis',.23,1]]],
+ ['虚飾の天使','自己再生・回復封じ',16000000,5000,[['regen',.48,.04],['healSeal',.49,3]]],
+ ['冥府の鎖使い','麻痺・脆弱',13500000,5400,[['paralysis',.26,1],['frail',.48,3]]],
+ ['深海の略奪者','魔法回数消耗・毒',15500000,4800,[['siphon',.50,12],['poison',.44,3]]],
+ ['白骨の軍神','防御破壊・暴威',17000000,5600,[['armorBreak',.55,3],['fury',.40,2.2]]],
+ ['蝕月の狼王','出血・連続大技',12500000,6100,[['bleed',.50,3],['heavy',.30,7]]],
+ ['影縫いの蜘蛛','鈍足・毒・暗闇',11000000,4700,[['slow',.49,3],['poison',.46,3],['blind',.28,2]]],
+ ['終焉の鐘守','貫通ダメージ・回復妨害',18000000,5900,[['trueStrike',.30,.25],['healSeal',.45,3]]],
+ ['次元裂きの魔竜','壁粉砕・防御破壊・大技',23000000,6400,[['wallCrush',.56,1],['armorBreak',.52,3],['heavy',.20,9]]],
+ ['雷霆の戦乙女','麻痺・大技・怒り',16500000,6100,[['paralysis',.28,1],['heavy',.29,9],['fury',.29,1.5]]],
+ ['逆理の王','超火力・魔法封印・貫通',25000000,6700,[['heavy',.32,10],['magicSeal',.48,3],['trueStrike',.23,.28]]]
+];
+const ISEKAI_BOSSES=ISEKAI_ROSTER.map(([name,style,hp,str,specials],i)=>({
+ id:'otherworld-'+(i+1),name,style,hp,str,mag:Math.round(str*.85),vit:180+i*2,
+ dex:700+i*9,agi:260+i*6,luk:480+i*6,exp:200000+i*8500,gold:50000+i*2000,
+ specials:specials.map(([type,rate,power])=>({type,rate,power}))
+}));
+// Unusual peaceful encounter. One successful hit is enough, but its chance is fixed at 0.001%.
+// The cat normally behaves peacefully; one rare, unavoidable instant-KO neko-punch is possible.
+const PEELUNA_BOSS={id:'otherworld-peeluna',name:'異世界に迷い込んだぴーるな',style:'超低確率の猫・ねこパンチ',hp:1,str:0,mag:0,vit:1,dex:0,agi:0,luk:0,exp:30200000,gold:7400000,passiveCat:true,specials:[]};
+const PEELUNA_ACTIONS=[
+ 'ゴロゴロ喉を鳴らしている','おててをないないしている','前足でふみふみしている',
+ '香箱座りのままこちらを見ている','しっぽの先をぴこぴこ動かしている','眠そうにゆっくりまばたきした',
+ '急に毛づくろいを始めた','ごろんと転がっておなかを見せている','小さなあくびをした',
+ '何もないところをじっと見つめている','のびーっと前足を伸ばしている',
+ 'こちらにお尻を向けて座っている','頭をこすりつけようか迷っている',
+ 'ちょこんと座ってひげを揺らしている','すやすや寝息を立てている'];
+ISEKAI_BOSSES.push(PEELUNA_BOSS);
+// Cat encounter has its own rarity check; the remaining 99.99% are uniform among 25 bosses.
+// Cat reward is ~100 times the NORMAL OTHERWORLD average (302,000 EXP / 74,000 G).
+function rollIsekaiBoss(){
+ if(rand()<PEELUNA_SPAWN_RATE)return PEELUNA_BOSS;
+ return ISEKAI_BOSSES[ri(0,ISEKAI_BOSSES.length-2)];
+}
+const ISEKAI_STATUS_NAMES={poison:'猛毒',bleed:'出血',blind:'暗闇',weaken:'攻撃弱体',slow:'鈍足',healSeal:'回復封じ',magicSeal:'魔法封印',armorBreak:'防御破壊',frail:'脆弱'};
+const ISEKAI_EFFECT_NAMES={paralysis:'神経麻痺',heavy:'滅殺の一撃',regen:'異界再生',leech:'生命吸収',trueStrike:'魂への直撃',wallCrush:'結界破砕',siphon:'魔法搾取',fury:'異界の怒り'};
+// Rarity is intentionally unassigned today. Uniform selection comes AFTER the 1% success roll.
+// Future rarity weights must be applied only to selection, never to the 1% acquisition roll.
+const ISEKAI_MAGIC_DROP_POOL=()=>MAGIC_CATALOG.filter(m=>m.kind==='spell');
 const isForestBossFloor=f=>Number.isInteger(f)&&f>=10&&f<=FOREST_MAX_FLOOR&&f%10===0;
 // Mastery is per equipment item, not per slot. EXP needed per mastery level never grows.
 const MASTERY_SCHEMA=1, MASTERY_EXP_PER_LEVEL=50, DEFAULT_MASTERY_CAP=2000;
@@ -69,10 +128,10 @@ const MASTERY_SLOTS=['weapon','body'];
 // Magic charges are independent from weapon mastery and from jobs.
 const MAGIC_SCHEMA=1, MAGIC_USES_MAX=5000, MAGIC_SHOP_RESTORE_CAP=3000, MAGIC_SHOP_MIN_USES=800;
 const MAGIC_CATALOG=[
- {key:'fire',name:'ファイアー',kind:'spell',price:3600,uses:3000,rate:20,effect:'固定500ダメージ',description:'敵に防御無視の固定500ダメージ。'},
- {key:'heal',name:'ヒール',kind:'spell',price:2500,uses:3000,rate:20,effect:'HP300回復',description:'自分のHPを最大300回復。'},
- {key:'beer',name:'ビール',kind:'spell',price:4200,uses:3000,rate:20,effect:'命中率半減・攻撃最終値×1.2',description:'1戦闘に1回だけ発動。その戦闘中は命中率が半分になり、通常攻撃・ジョブスキル・熟練技の最終ダメージが1.2倍。'},
- {key:'wall',name:'ウォール',kind:'spell',shop:false,price:null,uses:5000,rate:WALL_MAGIC_RATE,effect:'最大HP分の防御壁・最大HP×3まで重ねがけ',description:'発動時、最大HPと同量のダメージ吸収壁を張る。複数回発動で最大HPの3倍まで蓄積。戦闘が終わると消える。将来のドロップ専用魔法。'},
+ {key:'fire',name:'ファイアー',kind:'spell',dropRarity:'unset',price:3600,uses:3000,rate:20,effect:'固定500ダメージ',description:'敵に防御無視の固定500ダメージ。'},
+ {key:'heal',name:'ヒール',kind:'spell',dropRarity:'unset',price:2500,uses:3000,rate:20,effect:'HP300回復',description:'自分のHPを最大300回復。'},
+ {key:'beer',name:'ビール',kind:'spell',dropRarity:'unset',price:4200,uses:3000,rate:20,effect:'命中率半減・攻撃最終値×1.2',description:'1戦闘に1回だけ発動。その戦闘中は命中率が半分になり、通常攻撃・ジョブスキル・熟練技の最終ダメージが1.2倍。'},
+ {key:'wall',name:'ウォール',kind:'spell',dropRarity:'unset',shop:false,price:null,uses:5000,rate:WALL_MAGIC_RATE,effect:'最大HP分の防御壁・最大HP×3まで重ねがけ',description:'発動時、最大HPと同量のダメージ吸収壁を張る。複数回発動で最大HPの3倍まで蓄積。戦闘が終わると消える。将来のドロップ専用魔法。'},
  {key:'magic-stone',name:'魔法石',kind:'vessel',price:1400,capacity:2,multiplier:1,description:'最大2種類の魔法を詰められる。発動率は等倍。'},
  {key:'sun-stone',name:'太陽石',kind:'vessel',price:8500,capacity:3,multiplier:3,description:'最大3種類の魔法を詰められる。すべての内包魔法の発動率が3倍。'}
 ];
@@ -372,9 +431,27 @@ const expNeed=l=>{const v=[0,25,40,60,85,115,145,175,220,265];return v[l]??(265+
 function createState(){return {version:VERSION,activeJob:'mage',level:1,xp:0,hpGrowth:0,hp:78,gold:100,medals:0,baseStats:Object.fromEntries(attrs.map((key,i)=>[key,jobs.mage.base[i]])),casino:makeCasino(),location:'main',ore:0,floor:1,unlocked:1,
  kills:{1:0,2:0,3:0,4:0,5:0},wins:0,deaths:0,battleCount:0,bossDefeated:false,
  rng:0xAB155005,nextId:1,masterySchema:MASTERY_SCHEMA,equipmentPowerSchema:EQUIPMENT_POWER_SCHEMA,magicSchema:MAGIC_SCHEMA,wallGiftSchema:WALL_GIFT_SCHEMA,magics:[],equippedMagic:null,jobProgress:freshJobs(),loadouts:Object.fromEntries(jobKeys.map(j=>[j,blankSlots()])),inventory:[],equipped:blankSlots(),
- forest:makeForest(),history:[{id:0,headline:'新しい冒険',body:'6能力値・職業育成・カジノ島・装備熟練・魔法へようこそ。',at:'冒険開始'}]};}
+ forest:makeForest(),isekai:makeIsekai(),history:[{id:0,headline:'新しい冒険',body:'6能力値・職業育成・カジノ島・装備熟練・魔法へようこそ。',at:'冒険開始'}]};}
 function makeCasino(){return {poker:null,last:'',plays:0,purchased:[],materials:[]};}
 function makeForest(){return {floor:1,unlocked:1,kills:{},bossesDefeated:{},battleRecords:[]};}
+function makeIsekai(){return {wins:0,losses:0,retreats:0,encounters:0,battleRecords:[],magicDrops:0};}
+function normalizeIsekai(s){
+ if(!s.isekai||typeof s.isekai!=='object')s.isekai=makeIsekai();
+ for(const key of ['wins','losses','retreats','encounters','magicDrops']){
+  if(!Number.isInteger(s.isekai[key])||s.isekai[key]<0)s.isekai[key]=0;
+ }
+ if(!Array.isArray(s.isekai.battleRecords))s.isekai.battleRecords=[];
+ if(s.isekai.battleRecords.length>ISEKAI_RECORD_LIMIT)s.isekai.battleRecords=s.isekai.battleRecords.slice(0,ISEKAI_RECORD_LIMIT);
+ return s.isekai;
+}
+function rollIsekaiMagicDrop(){
+ if(rand()>=ISEKAI_MAGIC_DROP_RATE)return null;
+ const pool=ISEKAI_MAGIC_DROP_POOL();if(!pool.length)return null;
+ const def=randPick(pool),id='magic-'+state.nextId++;
+ const spell={id,key:def.key,name:def.name,kind:'spell',uses:ISEKAI_DROP_USES,maxUses:MAGIC_USES_MAX,containerId:null};
+ state.magics.push(spell);state.isekai.magicDrops++;
+ return {id,key:def.key,name:def.name,uses:spell.uses,rarity:def.dropRarity||'unset'};
+}
 function normalizeForest(s){
  if(!s.forest||typeof s.forest!=='object')s.forest=makeForest();
  const f=s.forest;
@@ -397,7 +474,7 @@ function upgradeState(s){if(!s||s.version!==VERSION||!jobs[s.activeJob])return s
  }
  s.autoRunProgress=null;
  if(!s.baseStats)s.baseStats=jobAttributes(s.activeJob,s.level); // retain v0.5's current stat progression
- normalizeForest(s);
+ normalizeForest(s);normalizeIsekai(s);
  // v0.16: append new upper jobs to old saves; preserve all earned stats, mastery, and inventory.
  if(!s.jobProgress||typeof s.jobProgress!=='object')s.jobProgress={};
  if(!s.loadouts||typeof s.loadouts!=='object')s.loadouts={};
@@ -430,7 +507,7 @@ function upgradeState(s){if(!s||s.version!==VERSION||!jobs[s.activeJob])return s
  if(!s.casino)s.casino=makeCasino();
  if(!Array.isArray(s.casino.purchased))s.casino.purchased=[];
  if(!Array.isArray(s.casino.materials))s.casino.materials=[];
- if(!['main','casino','forest'].includes(s.location))s.location='main';
+ if(!['main','casino','forest','isekai'].includes(s.location))s.location='main';
  if(!Array.isArray(s.inventory))s.inventory=[];
  for(const item of s.inventory)normalizeMastery(item);
  if(s.masterySchema!==MASTERY_SCHEMA){
@@ -471,7 +548,7 @@ function readState(){
  try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(valid(upgradeState(s)))return s;}catch(e){console.warn('save load failed',e);}
  return createState();
 }
-let state=readState();let tab=state.location==='casino'?'casino':state.location==='forest'?'forest':'explore',townSection='weapon',lastResult=null,gearFilter='all',autoSession=null;
+let state=readState();let tab=state.location==='casino'?'casino':state.location==='forest'?'forest':state.location==='isekai'?'isekai':'explore',townSection='weapon',lastResult=null,gearFilter='all',autoSession=null;
 function save(){try{for(const j of jobKeys)state.loadouts[j]={...state.equipped};localStorage.setItem(KEY,JSON.stringify(state));}catch(e){console.warn('save failed',e);toast('保存に失敗。記録からJSONを出力してください。');}}
 function rand(){let x=state.rng>>>0||0x12345678;x^=x<<13;x^=x>>>17;x^=x<<5;state.rng=x>>>0;return state.rng/4294967296;}
 function ri(a,b){return a+Math.floor(rand()*(b-a+1));}
@@ -496,7 +573,8 @@ function derived(){
 }
 function actionsPerTurn(agi){return 1+Math.min(3,Math.floor(agi/20));}
 function jobActionsPerTurn(agi){return actionsPerTurn(agi)+(activeMasterPassive()?.id==='swift'||state.activeJob==='acrobat'?1:0);}
-function playerAccuracy(d,foe){const base=accuracy(d.dex,foe.agi,d.luk,foe.luk);
+function playerAccuracy(d,foe){if(foe.passiveCat)return PEELUNA_HIT_RATE;
+ const base=accuracy(d.dex,foe.agi,d.luk,foe.luk);
  return ['archer','elite_archer','fencer'].includes(state.activeJob)?Math.min(99,base+(state.activeJob==='archer'?10:state.activeJob==='elite_archer'?15:5)):base;
 }
 function archerMasterRate(luk){return clamp(25+(luk-8)*.08,0,50);}
@@ -589,13 +667,28 @@ function forestMonster(f,isBoss=false){
  const name=FOREST_FOE_NAMES[ri(0,FOREST_FOE_NAMES.length-1)];
  return {name:'第'+f+'階・'+name,hp:Math.round(baseHp*(.90+rand()*.20)),str:Math.round(power*.66),mag:Math.round(power*.57),vit:8+f*2,dex:9+f*3,agi:7+f*2+ri(0,3),luk:6+f*2,exp:Math.round(14+f*11+f*f*.4),gold:Math.round(12+f*8+f*f*.2),floor:f,forest:true,boss:false};
 }
-function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?forestMonster(f,isBoss):monster(f,isBoss);let hp=foe.hp,rounds=0,damage=0,heal=0,misses=0,dodges=0,surges=0,actions=[],turnLogs=[],failed=false;const skillUses={},magicUses={};let beerUsed=false,beerActive=false,wallHp=0,berserk=false,paralyzeTurns=0,guaranteedBossHit=false;
- const recover=n=>{const got=clamp(Math.floor(n),0,derived().maxHP-state.hp);state.hp+=got;heal+=got;return got;};
- while(hp>0&&rounds<120){rounds++;
-  const turnInfo=dungeon==='forest'?{turn:rounds,playerHpBefore:state.hp,enemyHpBefore:hp,wallBefore:wallHp,playerHpAfter:state.hp,enemyHpAfter:hp,wallAfter:wallHp,events:[]}:null;
+function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='isekai'?rollIsekaiBoss():dungeon==='forest'?forestMonster(f,isBoss):monster(f,isBoss);let hp=foe.hp,rounds=0,damage=0,heal=0,misses=0,dodges=0,surges=0,actions=[],turnLogs=[],failed=false;const skillUses={},magicUses={};let beerUsed=false,beerActive=false,wallHp=0,berserk=false,paralyzeTurns=0,guaranteedBossHit=false,timedOut=false;
+ // Debuffs only exist inside this single encounter, never persist to the next boss.
+ const isekaiStatus={};let currentStatus={},enemyRageTurns=0,enemyRageMult=1;
+ if(dungeon==='isekai')state.isekai.encounters++;
+
+ const recover=n=>{const got=currentStatus.healSeal?0:clamp(Math.floor(n),0,derived().maxHP-state.hp);state.hp+=got;heal+=got;return got;};
+ while(hp>0&&rounds<BATTLE_TURN_LIMIT){rounds++;
+  const turnInfo=['forest','isekai'].includes(dungeon)?{turn:rounds,playerHpBefore:state.hp,enemyHpBefore:hp,wallBefore:wallHp,playerHpAfter:state.hp,enemyHpAfter:hp,wallAfter:wallHp,events:[]}:null;
   if(turnInfo)turnLogs.push(turnInfo);
   const record=message=>{if(actions.length<20)actions.push(message);if(turnInfo)turnInfo.events.push(String(message).replace(/^T\d+\s*/,''));};
   try{
+  currentStatus={};
+  if(dungeon==='isekai'){
+   for(const [k,v] of Object.entries(isekaiStatus)){
+    if(v>0){currentStatus[k]=true;isekaiStatus[k]=v-1;}
+   }
+   const dot=(currentStatus.poison?Math.ceil(derived().maxHP*.08):0)+(currentStatus.bleed?Math.ceil(derived().maxHP*.05):0);
+   if(dot){state.hp-=dot;damage+=dot;record('【'+[currentStatus.poison?'猛毒':'',currentStatus.bleed?'出血':''].filter(Boolean).join('・')+'】ウォール貫通 '+num(dot)+' HPダメージ');}
+   if(state.hp<=0){failed=true;record('状態異常によって力尽きた');break;}
+   const tags=Object.keys(currentStatus).filter(k=>ISEKAI_STATUS_NAMES[k]);
+   if(tags.length)record('状態異常：'+tags.map(k=>ISEKAI_STATUS_NAMES[k]).join('・'));
+  }
   const d=derived();const stunned=paralyzeTurns>0;if(stunned)paralyzeTurns--;
   const master=activeMasterPassive();
   if(master?.id==='life-spring'||state.activeJob==='cleric'){
@@ -603,16 +696,18 @@ function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?fo
    const recovered=recover(Math.ceil(d.maxHP*rate));
    if(recovered>0)record('【'+(state.activeJob==='cleric'?'聖なる加護':'生命の泉')+'】HP+'+num(recovered));
   }
-  const attacks=stunned?0:jobActionsPerTurn(d.agi);let stopped=false,guard=0;
+  const attacks=stunned?0:Math.max(1,jobActionsPerTurn(d.agi)-(currentStatus.slow?2:0));let stopped=false,guard=0;
   if(stunned)record('【麻痺】このターンは行動不能');
   if(turnInfo)record('行動回数：'+attacks+'回');
   // ONE magic cast per turn, regardless of agility and the number of attack actions.
-  const cast=stunned?null:rollMagicTurn(beerUsed,d.luk);
+  const cast=stunned||currentStatus.magicSeal?null:rollMagicTurn(beerUsed,d.luk);
+  if(currentStatus.magicSeal)record('【魔法封印】このターンの魔法発動抽選なし');
   if(cast){
    cast.uses--;magicUses[cast.name]=(magicUses[cast.name]||0)+1;
    if(cast.key==='fire'){
-    const before=hp;hp=Math.max(0,hp-500);
-    record('T'+rounds+'【ファイアー】固定'+Math.min(before,500)+'ダメージ（残'+cast.uses+'回）');
+    if(foe.passiveCat&&rand()*100>=PEELUNA_HIT_RATE){record('T'+rounds+'【ファイアー】ぴーるなはひらりとかわした（残'+cast.uses+'回）');}
+    else {const before=hp;hp=Math.max(0,hp-500);
+     record('T'+rounds+'【ファイアー】固定'+Math.min(before,500)+'ダメージ（残'+cast.uses+'回）');}
    }else if(cast.key==='heal'){
     const gained=recover(300);
     record('T'+rounds+'【ヒール】HP+'+gained+'（残'+cast.uses+'回）');
@@ -628,7 +723,9 @@ function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?fo
   }
   if(hp<=0)break;
   for(let a=0;a<attacks&&hp>0;a++){
-   if(rand()*100>=playerAccuracy(d,foe)*(beerActive?.5:1)){misses++;record('T'+rounds+' 命中失敗');continue;}
+   // For ぴーるな, no job/luck/beer modifier may raise or lower the fixed 0.001% rate.
+   const chance=foe.passiveCat?PEELUNA_HIT_RATE:playerAccuracy(d,foe)*(beerActive?.5:1)*(currentStatus.blind?.35:1);
+   if(rand()*100>=chance){misses++;record('T'+rounds+(foe.passiveCat?' ぴーるなはすいっと身をかわした':' 命中失敗'));continue;}
    const sk=rollSkill();if(sk){skillUses[sk.name]=(skillUses[sk.name]||0)+1;}
    const raw=jobs[state.activeJob].mode==='magic'?d.mag:d.str;
    const variance=.90+rand()*.20+Math.min(.06,d.luk/700);
@@ -646,14 +743,22 @@ function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?fo
    if(archerBoost)hit=Math.round(hit*(master?.id==='eagle-eye'?2.5:2));
    const advancedAttackBoost=['sword-dance','acrobatic-dance'].includes(master?.id);
    if(advancedAttackBoost)hit=Math.round(hit*1.2);
+   if(currentStatus.weaken)hit=Math.max(1,Math.round(hit*.55));
    const dealt=Math.min(hp,hit);hp=Math.max(0,hp-hit);let extra='';
    if(sk?.effect?.type==='heal')extra=' / HP+'+recover(sk.effect.value);
    if(sk?.effect?.type==='drain')extra=' / HP吸収+'+recover(dealt*sk.effect.value/100);
    if(sk?.effect?.type==='stun')stopped=true;
    if(sk?.effect?.type==='guard')guard=Math.max(guard,sk.effect.value);
-   record('T'+rounds+' '+(sk?'【'+sk.name+'】':'通常攻撃')+(surged?'［魔力暴走×'+(master?.id==='archmage-peak'?4:master?.id==='arcane-peak'?3.5:2.5)+'］':'')+(masteryStrike?'［極撃×'+(weaponTier*5)+'］':'')+(warriorBoost?'［不屈の闘志×1.25］':'')+(archerBoost?'［'+(master?.id==='eagle-eye'?'鷹の眼×2.5':'弱点看破×2')+'］':'')+(advancedAttackBoost?'［'+master.name+'×1.2］':'')+' '+hit+'ダメージ'+extra);
+   record('T'+rounds+' '+(sk?'【'+sk.name+'】':'通常攻撃')+(surged?'［魔力暴走×'+(master?.id==='archmage-peak'?4:master?.id==='arcane-peak'?3.5:2.5)+'］':'')+(masteryStrike?'［極撃×'+(weaponTier*5)+'］':'')+(warriorBoost?'［不屈の闘志×1.25］':'')+(archerBoost?'［'+(master?.id==='eagle-eye'?'鷹の眼×2.5':'弱点看破×2')+'］':'')+(advancedAttackBoost?'［'+master.name+'×1.2］':'')+(currentStatus.weaken?'［弱体化×0.55］':'')+' '+hit+'ダメージ'+extra);
   }
   if(hp<=0)break;
+  if(foe.passiveCat){
+   if(rand()<PEELUNA_PUNCH_RATE){
+    record('【ねこパンチ】必中即死！ ぴーるなの気まぐれな一撃が炸裂した');
+    damage+=Math.max(0,state.hp);state.hp=0;failed=true;break;
+   }
+   record('【ぴーるな】'+randPick(PEELUNA_ACTIONS));continue;
+  }
   if(isBoss&&!berserk&&hp<=foe.hp*BOSS_BERSERK_HP_RATE){berserk=true;record('【暴走】ボスHP50%以下：以降の攻撃ダメージ×'+BOSS_BERSERK_DAMAGE_MULTIPLIER);}
   if(stopped){record('反撃を阻止');continue;}
   const isFinalBoss=isBoss&&dungeon==='forest'&&f===50;
@@ -667,11 +772,51 @@ function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?fo
   }
   if(paralysisTriggered&&!desperate)continue;
   if(desperate)record('【原初の壊撃】命中率10%・ダメージ×10'+(guaranteedBossHit?'（麻痺により必中）':''));
+  // Every Otherworld boss carries its own independently rolled special ability table.
+  let isekaiAttackBoost=1,isekaiAccuracyOverride=null,isekaiLeech=0;
+  if(dungeon==='isekai'){
+   for(const effect of foe.specials){
+    if(rand()>=effect.rate)continue;
+    const {type,power}=effect;
+    if(ISEKAI_STATUS_NAMES[type]){
+     isekaiStatus[type]=Math.max(isekaiStatus[type]||0,power);
+     record('【'+ISEKAI_STATUS_NAMES[type]+'】'+num(power)+'ターン継続');
+    }else if(type==='paralysis'){
+     paralyzeTurns=1;guaranteedBossHit=true;
+     record('【神経麻痺】次ターン行動不能・次のボス攻撃必中');
+    }else if(type==='heavy'){
+     isekaiAttackBoost*=power;isekaiAccuracyOverride=10;
+     record('【滅殺の一撃】命中率10%・攻撃ダメージ×'+power+(guaranteedBossHit?'（麻痺で必中）':''));
+    }else if(type==='trueStrike'){
+     const direct=Math.max(1,Math.ceil(derived().maxHP*power));
+     state.hp-=direct;damage+=direct;
+     record('【魂への直撃】壁と防御を無視してHP '+num(direct)+'ダメージ');
+     if(state.hp<=0){failed=true;break;}
+    }else if(type==='wallCrush'){
+     const removed=Math.min(wallHp,Math.ceil(wallHp*power));wallHp-=removed;
+     record('【結界破砕】ウォールを'+num(removed)+'削る（残'+num(wallHp)+'）');
+    }else if(type==='siphon'){
+     const choices=spellListForActive().filter(m=>m.uses>0);
+     if(choices.length){const spell=randPick(choices),taken=Math.min(spell.uses,power);spell.uses-=taken;record('【魔法搾取】'+spell.name+'の回数−'+num(taken));}
+     else record('【魔法搾取】奪える魔法なし');
+    }else if(type==='regen'){
+     const before=hp;hp=Math.min(foe.hp,hp+Math.ceil(foe.hp*power));
+     record('【異界再生】ボスHP+'+num(hp-before));
+    }else if(type==='leech'){
+     isekaiLeech=Math.max(isekaiLeech,power);
+     record('【生命吸収】この攻撃のHP被害を'+Math.round(power*100)+'%吸収');
+    }else if(type==='fury'){
+     enemyRageTurns=Math.max(enemyRageTurns,3);enemyRageMult=Math.max(enemyRageMult,power);
+     record('【異界の怒り】3回の攻撃ダメージ×'+power);
+    }
+   }
+   if(failed)break;
+  }
   const d2=derived();
-  const hitRate=guaranteedBossHit?100:desperate?FINAL_BOSS_DESPERATE_ACCURACY:accuracy(foe.dex,d2.agi,foe.luk,d2.luk);
+  const hitRate=guaranteedBossHit?100:isekaiAccuracyOverride??(desperate?FINAL_BOSS_DESPERATE_ACCURACY:accuracy(foe.dex,d2.agi,foe.luk,d2.luk));
   guaranteedBossHit=false; // Always consumed by the NEXT attack attempt, whether hit or miss.
   if(rand()*100>=hitRate){dodges++;record('敵の攻撃を回避！'+(desperate?'（原初の壊撃）':''));continue;}
-  let enemyHit=Math.max(1,Math.round(Math.max(1,4+foe.str*1.35+(dungeon==='forest'?f*3:f*2)-d2.baseDefense)*(.90+rand()*.20)));
+  let enemyHit=Math.max(1,Math.round(Math.max(1,4+foe.str*1.35+(dungeon==='forest'?f*3:f*2)-d2.baseDefense*(currentStatus.armorBreak?.25:1))*(.90+rand()*.20)));
   if(guard)enemyHit=Math.max(1,Math.ceil(enemyHit*(1-guard/100)));
   // Defensive passives reduce damage before the Wall absorbs it.
   if(state.activeJob==='knight')enemyHit=Math.max(1,Math.ceil(enemyHit*.90));
@@ -682,25 +827,38 @@ function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?fo
   if(heavyKnightMasterGuard)enemyHit=Math.max(1,Math.ceil(enemyHit*.65));
   if(berserk)enemyHit=Math.max(1,Math.round(enemyHit*BOSS_BERSERK_DAMAGE_MULTIPLIER));
   if(desperate)enemyHit=Math.max(1,Math.round(enemyHit*FINAL_BOSS_DESPERATE_DAMAGE_MULTIPLIER));
+  if(dungeon==='isekai'){
+   if(enemyRageTurns>0){enemyHit=Math.max(1,Math.round(enemyHit*enemyRageMult));enemyRageTurns--;if(enemyRageTurns===0)enemyRageMult=1;}
+   if(isekaiAttackBoost!==1)enemyHit=Math.max(1,Math.round(enemyHit*isekaiAttackBoost));
+   if(currentStatus.frail)enemyHit=Math.max(1,Math.round(enemyHit*1.5));
+  }
   const shieldAbsorbed=Math.min(wallHp,enemyHit);wallHp-=shieldAbsorbed;
   const healthDamage=enemyHit-shieldAbsorbed;
   state.hp-=healthDamage;damage+=healthDamage;
+  if(isekaiLeech&&healthDamage>0){const gained=Math.min(foe.hp-hp,Math.ceil(healthDamage*isekaiLeech));hp+=gained;record('【生命吸収】ボスHP+'+num(gained));}
   const armor=equippedMastery('body'),armorTier=masteryTier(armor);
   const masteryHeal=state.hp>0&&armorTier>0&&rand()*100<masteryProcRate();
   const recovered=masteryHeal?recover(Math.ceil(derived().maxHP*armorTier*.10)):0;
-  record('敵の攻撃 '+num(enemyHit)+'ダメージ'+(desperate?'［原初の壊撃×10］':'')+(berserk?'［暴走×1.5］':'')+(state.activeJob==='knight'?'［守護−10%］':'')+(state.activeJob==='heavy_knight'?'［重装防御−20%］':'')+(knightMasterGuard?'［不落の構え−30%］':'')+(heavyKnightMasterGuard?'［金剛の守り−35%］':'')+(shieldAbsorbed?'［壁が'+num(shieldAbsorbed)+'吸収・残'+num(wallHp)+'］':'')+' / HP被害 '+num(healthDamage)+(masteryHeal?'［再生：HP+'+recovered+'］':''));
+  record('敵の攻撃 '+num(enemyHit)+'ダメージ'+(desperate?'［原初の壊撃×10］':'')+(isekaiAttackBoost!==1?'［異世界大技×'+isekaiAttackBoost+'］':'')+(currentStatus.frail?'［脆弱×1.5］':'')+(currentStatus.armorBreak?'［防御破壊］':'')+(berserk?'［暴走×1.5］':'')+(state.activeJob==='knight'?'［守護−10%］':'')+(state.activeJob==='heavy_knight'?'［重装防御−20%］':'')+(knightMasterGuard?'［不落の構え−30%］':'')+(heavyKnightMasterGuard?'［金剛の守り−35%］':'')+(shieldAbsorbed?'［壁が'+num(shieldAbsorbed)+'吸収・残'+num(wallHp)+'］':'')+' / HP被害 '+num(healthDamage)+(masteryHeal?'［再生：HP+'+recovered+'］':''));
   if(state.hp<=0){failed=true;break;}
   }finally{if(turnInfo){turnInfo.playerHpAfter=state.hp;turnInfo.enemyHpAfter=hp;turnInfo.wallAfter=wallHp;}}
  }
- if(hp>0&&rounds>=120)failed=true;
+ if(hp>0&&rounds>=BATTLE_TURN_LIMIT&&!failed)timedOut=true;
  state.battleCount++;
  const masteryGains=grantBattleMastery();
+ if(timedOut){
+  const exp=Math.floor(foe.exp*TIMEOUT_EXP_RATE),levels=gainExperience(exp);
+  if(dungeon==='isekai')state.isekai.retreats++;
+  logEntry('撤退：'+foe.name,BATTLE_TURN_LIMIT+'ターン時間切れ。経験値70%（+'+num(exp)+' EXP）、獲得Gなし。');
+  return {name:foe.name,win:false,retreated:true,rounds,damage,heal,misses,dodges,surges,actions,turnLogs,skillUses,magicUses,masteryGains,magicDrop:null,exp,gold:0,ore:0,levelUps:levels.general,jobUps:levels.job};
+ }
  if(failed){state.deaths++;const loss=Math.floor(state.gold*.1);state.gold-=loss;
-  if(dungeon==='forest')state.forest.floor=1;else state.floor=1;
+  if(dungeon==='forest')state.forest.floor=1;else if(dungeon==='main')state.floor=1;else if(dungeon==='isekai')state.isekai.losses++;
   state.hp=Math.max(1,Math.ceil(derived().maxHP*.25));
-  logEntry('敗北：'+foe.name,(dungeon==='forest'?'魔の森の入口':'拠点')+'へ救出。'+loss+'Gを失った。');
+  logEntry('敗北：'+foe.name,(dungeon==='forest'?'魔の森の入口':dungeon==='isekai'?'異世界の門':'拠点')+'へ救出。'+loss+'Gを失った。');
   return {name:foe.name,win:false,rounds,damage,heal,misses,dodges,surges,actions,turnLogs,skillUses,magicUses,masteryGains,exp:0,gold:0,ore:0};}
  state.wins++;
+ if(dungeon==='isekai')state.isekai.wins++;
  if(dungeon==='forest'){
   const forest=state.forest;
   if(isBoss){
@@ -712,7 +870,7 @@ function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?fo
    forest.kills[f]=(forest.kills[f]||0)+1;
    if(forest.unlocked===f&&f<FOREST_MAX_FLOOR&&forest.kills[f]>=FOREST_WINS_TO_ADVANCE)forest.unlocked=f+1;
   }
- }else state.kills[f]++;
+ }else if(dungeon==='main')state.kills[f]++;
  const baseGold=foe.gold+ri(0,Math.max(1,Math.floor(derived().luk/8)));
  const gold=state.activeJob==='bandit'?Math.floor(baseGold*(activeMasterPassive()?.id==='plunder-master'?1.4:1.2)):baseGold;
  state.gold+=gold;const levels=gainExperience(foe.exp);
@@ -722,11 +880,12 @@ function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?fo
   if(!isBoss&&f<5&&state.kills[f]>=floors[f].need&&state.unlocked===f)state.unlocked=f+1;
   if(isBoss)state.bossDefeated=true;
  }
+ const magicDrop=dungeon==='isekai'?rollIsekaiMagicDrop():null;
  const skLog=Object.entries(skillUses).map(([n,v])=>n+'×'+v).join('、');
  const magicLog=Object.entries(magicUses).map(([n,v])=>n+'×'+v).join('、');
  const masteryLog=masteryGains.map(x=>x.name+' 熟練EXP+'+x.exp+(x.levels?'／熟練+'+x.levels:'')).join('、');
- logEntry((isBoss?'ボス撃破：':'勝利：')+foe.name,(dungeon==='forest'?'魔の森 第'+f+'階 / ':'')+rounds+'ターン / EXP+'+foe.exp+' / '+gold+'G'+(skLog?' / '+skLog:'')+(magicLog?' / 魔法：'+magicLog:'')+(ore?' / 鉱石+'+ore:'')+(masteryLog?' / '+masteryLog:''));
- return {name:foe.name,win:true,rounds,damage,heal,misses,dodges,surges,skillUses,magicUses,masteryGains,actions,turnLogs,exp:foe.exp,gold,ore,levelUps:levels.general,jobUps:levels.job};
+ logEntry((isBoss?'ボス撃破：':'勝利：')+foe.name,(dungeon==='forest'?'魔の森 第'+f+'階 / ':dungeon==='isekai'?'異世界 / ':'')+rounds+'ターン / EXP+'+foe.exp+' / '+gold+'G'+(skLog?' / '+skLog:'')+(magicLog?' / 魔法：'+magicLog:'')+(magicDrop?' / 魔法ドロップ：'+magicDrop.name:'')+(ore?' / 鉱石+'+ore:'')+(masteryLog?' / '+masteryLog:''));
+ return {name:foe.name,win:true,rounds,damage,heal,misses,dodges,surges,skillUses,magicUses,masteryGains,actions,turnLogs,magicDrop,exp:foe.exp,gold,ore,levelUps:levels.general,jobUps:levels.job};
 }
 // Auto expedition executes the SAME fightOne engine as manual fights, yielding to the browser
 // between individual battles. Its live timer/state is not saved; its completed rewards are.
@@ -784,13 +943,13 @@ function runAutoStep(){const a=autoSession;if(!a?.running)return;
   a.masteryExp+=(result.masteryGains||[]).reduce((total,g)=>total+g.exp,0);
   a.magicUsed+=Object.values(result.magicUses||{}).reduce((total,n)=>total+n,0);
   if(a.dungeon==='forest'){
-   state.forest.battleRecords.unshift({id:state.battleCount,floor:a.floor,isBoss:a.isBoss,name:result.name,win:result.win,rounds:result.rounds,damage:result.damage,heal:result.heal,exp:result.exp,gold:result.gold,turns:result.turnLogs||[]});
+   state.forest.battleRecords.unshift({id:state.battleCount,floor:a.floor,isBoss:a.isBoss,name:result.name,win:result.win,retreated:!!result.retreated,rounds:result.rounds,damage:result.damage,heal:result.heal,exp:result.exp,gold:result.gold,turns:result.turnLogs||[]});
    if(state.forest.battleRecords.length>FOREST_RECORD_LIMIT)state.forest.battleRecords.length=FOREST_RECORD_LIMIT;
   }
   // Always persist exactly this battle BEFORE considering the next one.
   state.autoRunProgress=autoSnapshot(a);save();
   if(a.completed%AUTO_DRAW_EVERY===0){renderHero();refreshAutoPanel();}
-  if(!result.win){finishAutoRun('敗北（即停止）');return;}
+  if(!result.win){finishAutoRun(result.retreated?'150ターン時間切れ・撤退':'敗北（即停止）');return;}
   if(a.stopAtMaster&&isJobMaster(a.job)){finishAutoRun('ジョブマスター到達');return;}
   if(state.hp<=derived().maxHP*a.retreatPercent/100){finishAutoRun('HP'+a.retreatPercent+'%以下で撤退');return;}
   if(a.isBoss&&a.dungeon==='main'){finishAutoRun('通常迷宮のボス討伐（再戦不可）');return;}
@@ -817,7 +976,10 @@ function startAutoRun(){
 }
 function run(count,isBoss=false,dungeon='main'){
  if(autoSession?.running){toast('自動周回中です。先に停止してください');return;}
- if(dungeon==='forest'){
+ if(dungeon==='isekai'){
+  if(state.location!=='isekai'||!isBoss){toast('異世界の門から挑戦してください');return;}
+  count=1;
+ }else if(dungeon==='forest'){
   if(state.location!=='forest'){toast('魔の森に移動してください');return;}
   if(isBoss!==isForestBossFloor(state.forest.floor)){toast('この階層では選択した戦闘ができません');return;}
   if(isBoss)count=1;
@@ -826,21 +988,26 @@ function run(count,isBoss=false,dungeon='main'){
   if(isBoss&&(state.floor!==5||state.kills[5]<floors[5].need||state.bossDefeated)){toast('ボス出現条件が未達成');return;}
  }
  if(!Number.isInteger(count)||count<1||count>30)return;
- const floor=dungeon==='forest'?state.forest.floor:state.floor,retreat=Number($('#retreat')?.value??40);
+ const floor=dungeon==='isekai'?0:dungeon==='forest'?state.forest.floor:state.floor,retreat=Number($('#retreat')?.value??40);
  if(!Number.isFinite(retreat)||retreat<0){toast('撤退HPは0以上');return;}
  const results=[];let exp=0,gold=0,ore=0,jobUps=0,levelUps=0,surges=0,misses=0,dodges=0,reason='周回完了';const masteryTotals={},magicTotals={};
  for(let i=0;i<count;i++){
   if(state.hp<=retreat){reason='撤退条件に到達';break;}
   const r=fightOne(floor,isBoss,dungeon);results.push(r);
+  if(dungeon==='isekai'){
+   const entry={id:state.battleCount,dungeon:'isekai',name:r.name,win:r.win,retreated:!!r.retreated,rounds:r.rounds,damage:r.damage,heal:r.heal,exp:r.exp,gold:r.gold,magicDrop:r.magicDrop||null,turns:r.turnLogs||[]};
+   state.isekai.battleRecords.unshift(entry);
+   if(state.isekai.battleRecords.length>ISEKAI_RECORD_LIMIT)state.isekai.battleRecords.length=ISEKAI_RECORD_LIMIT;
+  }
   if(dungeon==='forest'){
-   const entry={id:state.battleCount,floor,isBoss,name:r.name,win:r.win,rounds:r.rounds,damage:r.damage,heal:r.heal,exp:r.exp,gold:r.gold,turns:r.turnLogs||[]};
+   const entry={id:state.battleCount,floor,isBoss,name:r.name,win:r.win,retreated:!!r.retreated,rounds:r.rounds,damage:r.damage,heal:r.heal,exp:r.exp,gold:r.gold,turns:r.turnLogs||[]};
    state.forest.battleRecords.unshift(entry);
    if(state.forest.battleRecords.length>FOREST_RECORD_LIMIT)state.forest.battleRecords.length=FOREST_RECORD_LIMIT;
   }
   exp+=r.exp;gold+=r.gold;ore+=r.ore;levelUps+=r.levelUps||0;jobUps+=r.jobUps||0;surges+=r.surges;misses+=r.misses;dodges+=r.dodges;
   for(const [name,n] of Object.entries(r.magicUses||{}))magicTotals[name]=(magicTotals[name]||0)+n;
   for(const g of r.masteryGains||[]){const k=g.id;if(!masteryTotals[k])masteryTotals[k]={name:g.name,exp:0,levels:0};masteryTotals[k].exp+=g.exp;masteryTotals[k].levels+=g.levels;}
-  if(!r.win){reason='敗北・拠点へ帰還';break;}
+  if(!r.win){reason=r.retreated?'150ターン経過・撤退':'敗北・拠点へ帰還';break;}
   if(state.hp<=retreat){reason='HPが撤退ライン以下';break;}
  }
  if(!results.length)reason='戦闘前に撤退条件に到達';
@@ -888,11 +1055,11 @@ function forestRecordsHTML(){
  const entries=state.forest.battleRecords||[];
  return `<section class="panel" id="forestRecords"><div class="split"><h3 class="sectiontitle">魔の森の戦闘記録</h3><span class="pill">直近 ${entries.length} / ${FOREST_RECORD_LIMIT} 戦</span></div>
  <p class="hint">各戦闘の「記録」をタップすると、全ターンの行動順・HP変化・スキル・魔法・熟練技を表示します。戦闘後や再読み込み後にも閲覧できます。v0.10以前の戦闘には詳細がありません。</p>
- <div class="forest-record-list">${entries.map(r=>`<div class="forest-record-row"><div class="forest-record-header"><div><strong>#${num(r.id)} 第${r.floor}階 ${esc(r.name)}</strong><div class="small muted">${r.isBoss?'ボス / ':''}${r.win?'勝利':'敗北'} · ${r.rounds}ターン · 被ダメ ${num(r.damage)} · EXP +${num(r.exp||0)}</div></div><button class="btn forest-record-button" data-forestrecord="${r.id}" aria-expanded="false">記録</button></div><div class="forest-record-detail" id="forest-record-${r.id}"></div></div>`).join('')||'<div class="empty">魔の森で戦闘すると、ここにターンごとの記録が残ります。</div>'}</div></section>`;
+ <div class="forest-record-list">${entries.map(r=>`<div class="forest-record-row"><div class="forest-record-header"><div><strong>#${num(r.id)} 第${r.floor}階 ${esc(r.name)}</strong><div class="small muted">${r.isBoss?'ボス / ':''}${r.win?'勝利':r.retreated?'撤退':'敗北'} · ${r.rounds}ターン · 被ダメ ${num(r.damage)} · EXP +${num(r.exp||0)}</div></div><button class="btn forest-record-button" data-forestrecord="${r.id}" aria-expanded="false">記録</button></div><div class="forest-record-detail" id="forest-record-${r.id}"></div></div>`).join('')||'<div class="empty">魔の森で戦闘すると、ここにターンごとの記録が残ります。</div>'}</div></section>`;
 }
 function forestBattleDetailHTML(r){
  if(!r||!Array.isArray(r.turns))return '<div class="empty">この戦闘の詳細記録はありません。</div>';
- return `<div class="forest-turn-list"><p class="hint">#${num(r.id)} · 第${r.floor}階 · ${esc(r.name)} · ${r.win?'勝利':'敗北'}（全${r.rounds}ターン）</p>
+ return `<div class="forest-turn-list"><p class="hint">#${num(r.id)} · ${r.dungeon==='isekai'?'異世界':'第'+r.floor+'階'} · ${esc(r.name)} · ${r.win?'勝利':r.retreated?'撤退':'敗北'}（全${r.rounds}ターン）</p>
  ${r.turns.map(t=>`<div class="forest-turn"><div class="forest-turn-head"><strong>ターン ${num(t.turn)}</strong><span>自HP ${num(t.playerHpBefore)} → ${num(t.playerHpAfter)}</span><span>敵HP ${num(t.enemyHpBefore)} → ${num(t.enemyHpAfter)}</span>${Number.isFinite(t.wallBefore)?`<span>壁 ${num(t.wallBefore)} → ${num(t.wallAfter)}</span>`:''}</div><ol class="forest-events">${(t.events||[]).map(e=>`<li>${esc(e)}</li>`).join('')}</ol></div>`).join('')||'<div class="empty">ターンの記録がありません</div>'}</div>`;
 }
 function toggleForestRecord(id){
@@ -903,6 +1070,30 @@ function toggleForestRecord(id){
  document.querySelectorAll('.forest-record-detail').forEach(el=>{if(el!==target)el.replaceChildren();});
  document.querySelectorAll('[data-forestrecord]').forEach(button=>{button.setAttribute('aria-expanded',String(opening&&Number(button.dataset.forestrecord)===id));button.textContent=opening&&Number(button.dataset.forestrecord)===id?'閉じる':'記録';});
  if(opening)target.innerHTML=forestBattleDetailHTML(r);else target.replaceChildren();
+}
+function isekaiRecordsHTML(){
+ const entries=state.isekai.battleRecords;
+ return `<section class="panel" id="isekaiRecords"><div class="split"><h3 class="sectiontitle">異世界の戦闘記録</h3><span class="pill">直近 ${entries.length} / ${ISEKAI_RECORD_LIMIT} 戦</span></div>
+ <p class="hint">各戦闘の「記録」から、特殊行動やデバフの発生順、HP・ウォールの増減まで確認できます。セーブにも保存されます。</p>
+ <div class="forest-record-list">${entries.map(r=>`<div class="forest-record-row"><div class="forest-record-header"><div><strong>#${num(r.id)} ${esc(r.name)}</strong><div class="small muted">${r.win?'勝利':r.retreated?'撤退':'敗北'} · ${r.rounds}ターン · 被ダメ ${num(r.damage)} · 魔法ドロップ ${esc(r.magicDrop?.name||'なし')}</div></div><button class="btn forest-record-button" data-isekairecord="${r.id}" aria-expanded="false">記録</button></div><div class="forest-record-detail" id="isekai-record-${r.id}"></div></div>`).join('')||'<div class="empty">異世界で戦うと、ここに全ターンの詳細が残ります。</div>'}</div></section>`;
+}
+function toggleIsekaiRecord(id){
+ if(state.location!=='isekai')return;
+ const r=state.isekai.battleRecords.find(x=>x.id===id),target=document.getElementById('isekai-record-'+id);
+ if(!r||!target)return;
+ const opening=!target.hasChildNodes();
+ document.querySelectorAll('.forest-record-detail').forEach(el=>{if(el!==target)el.replaceChildren();});
+ document.querySelectorAll('[data-isekairecord]').forEach(button=>{const active=opening&&Number(button.dataset.isekairecord)===id;button.setAttribute('aria-expanded',String(active));button.textContent=active?'閉じる':'記録';});
+ if(opening)target.innerHTML=forestBattleDetailHTML(r);else target.replaceChildren();
+}
+function isekaiHTML(){
+ const x=state.isekai;
+ return `<section class="panel"><div class="kicker">OTHERWORLD · RANDOM BOSS BATTLE</div><div class="split"><div><h2 class="sectiontitle">✦ 異世界</h2><p class="intro">階層なし。通常の25体は均等抽選。ごくまれに「異世界に迷い込んだぴーるな」が出現する。全ボスが特殊な行動を持つ。</p></div><button class="btn ghost" data-travel="main">⌂ 拠点へ戻る</button></div>
+ <div class="info"><span class="pill gold">通常25体＋激レア1体</span><span class="pill">ぴーるな出現0.01%</span><span class="pill">勝利 ${num(x.wins)} 回</span><span class="pill">敗北 ${num(x.losses)} 回</span><span class="pill">撤退 ${num(x.retreats)} 回</span><span class="pill good">魔法ドロップ 1%</span></div>
+ <div class="notice" style="margin-top:14px">HPは魔の森50階級。毒・出血・麻痺・暗闇・攻撃弱体・回復封じ・魔法封印・防御破壊・防御壁破壊・HP貫通攻撃など、ボスごとに異なる対策が必要。通常のボスはHP50%以下で暴走する。例外の「異世界に迷い込んだぴーるな」は命中率固定0.001%、普段は猫らしく過ごすが毎ターン0.05%で必中即死の「ねこパンチ」を使う。</div>
+ <div class="split" style="margin-top:15px"><div><strong>魔法ドロップ</strong><p class="small muted">勝利時に1%で魔法1個。現存する4種類は均等（各当選時25%）。ドロップは3,000回。将来のレアリティ制に対応する項目を準備済み。</p></div><span class="pill">累計獲得 ${num(x.magicDrops)} 個</span></div>
+ <div class="buttonrow" style="margin-top:16px"><button class="btn gold" data-isekaifight="1">⚔ ランダムボスに挑戦（1戦）</button></div>
+ <p class="hint">通常ボスは均等抽選。ぴーるなは0.01%で出現し、討伐報酬は3,020万EXP・740万G。全戦闘150ターン制限で、時間切れなら経験値70%・Gなしの撤退（死亡扱いにはならない）。通常敗北は従来どおり所持Gの10%を失う。異世界の自動周回は未対応。</p></section>${resultHTML()}${isekaiRecordsHTML()}`;
 }
 function forestHTML(){
  const forest=state.forest,f=forest.floor,bossFloor=isForestBossFloor(f),def=FOREST_BOSSES[f];
@@ -930,12 +1121,12 @@ function renderHero(){const d=derived(),p=state.jobProgress[state.activeJob],max
  <div><div class="barline"><span>ジョブEXP</span><strong>${p.level>=JOB_CAP?'MAX':num(p.xp)+' / '+num(expNeed(p.level))}</strong></div><div class="track"><div class="fill jobxp" style="width:${p.level>=JOB_CAP?100:clamp(p.xp/expNeed(p.level)*100,0,100)}%"></div></div></div></div>
  <div class="statgrid six">${attrs.map(a=>`<div class="stat"><span>${attrLabels[a]}</span><strong>${num(d[a])}</strong></div>`).join('')}</div><div class="info" style="margin-top:10px"><span class="pill gold">装備攻撃 ${num(d.baseAttack)}</span><span class="pill blue">装備防御 ${num(d.baseDefense)}</span><span class="pill">熟練技 ${masteryProcRate()}%</span></div>
  <div class="hint" style="margin-top:14px">命中 ${accuracy(d.dex,8,d.luk,8).toFixed(1)}% / 回避 ${ (100-accuracy(8,d.agi,8,d.luk)).toFixed(1)}%（基準値8の相手） · 1ターン ${jobActionsPerTurn(d.agi)}回行動</div>`;
- $('#locationBadge').textContent=state.location==='casino'?'カジノ島':state.location==='forest'?'魔の森・'+state.forest.floor+'階':'第'+state.floor+'層';$('#goldBadge').textContent=num(state.gold)+' G'+(state.location==='casino'?' / '+num(state.medals)+' M':'');
+ $('#locationBadge').textContent=state.location==='casino'?'カジノ島':state.location==='isekai'?'異世界':state.location==='forest'?'魔の森・'+state.forest.floor+'階':'第'+state.floor+'層';$('#goldBadge').textContent=num(state.gold)+' G'+(state.location==='casino'?' / '+num(state.medals)+' M':'');
 }
 function resultHTML(){if(!lastResult)return '';
  const r=lastResult;return `<section class="result" id="lastResult"><div class="kicker">AUTO BATTLE RESULTS</div><h3>${esc(r.reason)}</h3><div class="resultgrid">${[
  [r.results.filter(x=>x.win).length+'/'+r.results.length,'勝利 / 戦闘'],['+'+num(r.exp),'EXP'],['+'+num(r.gold)+' G','獲得G'],[r.surges,'魔力暴走'],[r.misses,'攻撃ミス'],[r.dodges,'回避成功']
- ].map(([v,k])=>`<div class="metric"><b>${v}</b><small>${k}</small></div>`).join('')}</div><hr class="divider"><div class="small">総合LvUP +${r.levelUps} / ジョブLvUP +${r.jobUps} / 鉱石 +${r.ore} / ${r.dungeon==='forest'?'素材・魔法ドロップなし（空テーブル）':'装備ドロップなし'}</div><div class="small" style="margin-top:8px">${r.masteryTotals.length?r.masteryTotals.map(x=>esc(x.name)+' 熟練EXP +'+x.exp+(x.levels?'（熟練+'+x.levels+'）':'')).join(' / '):'熟練EXP：獲得対象なし・上限到達'}</div><div class="small" style="margin-top:8px">魔法：${Object.keys(r.magicTotals||{}).length?Object.entries(r.magicTotals).map(([n,c])=>esc(n)+'×'+c).join(' / '):'発動なし'}</div>${r.dungeon==='forest'?'<p class="hint">下の「魔の森の戦闘記録」から各戦闘の「記録」をタップすると、全ターンの処理を確認できます。</p>':`<details style="margin-top:12px"><summary class="small muted">戦闘の内訳</summary>${r.results.map((b,i)=>`<p class="small" style="line-height:1.75"><strong>#${state.battleCount-r.results.length+i+1} ${esc(b.name)}</strong> / ${b.win?'勝利':'敗北'} / ${b.rounds}T / 被ダメ${b.damage}<span class="muted tiny" style="display:block">${esc(b.actions.join(' ／ '))}</span></p>`).join('')}</details>`}</section>`;
+ ].map(([v,k])=>`<div class="metric"><b>${v}</b><small>${k}</small></div>`).join('')}</div><hr class="divider"><div class="small">総合LvUP +${r.levelUps} / ジョブLvUP +${r.jobUps} / 鉱石 +${r.ore} / ${r.dungeon==='forest'?'素材・魔法ドロップなし（空テーブル）':r.dungeon==='isekai'?'魔法ドロップ率1%':'装備ドロップなし'}</div><div class="small" style="margin-top:8px">${r.masteryTotals.length?r.masteryTotals.map(x=>esc(x.name)+' 熟練EXP +'+x.exp+(x.levels?'（熟練+'+x.levels+'）':'')).join(' / '):'熟練EXP：獲得対象なし・上限到達'}</div><div class="small" style="margin-top:8px">魔法ドロップ：${r.dungeon==='isekai'?(r.results.map(x=>x.magicDrop?.name).filter(Boolean).map(esc).join(' / ')||'なし'):'対象外'}</div><div class="small" style="margin-top:8px">魔法：${Object.keys(r.magicTotals||{}).length?Object.entries(r.magicTotals).map(([n,c])=>esc(n)+'×'+c).join(' / '):'発動なし'}</div>${['forest','isekai'].includes(r.dungeon)?'<p class="hint">下の戦闘記録にある「記録」をタップすると、全ターンの処理を確認できます。</p>':`<details style="margin-top:12px"><summary class="small muted">戦闘の内訳</summary>${r.results.map((b,i)=>`<p class="small" style="line-height:1.75"><strong>#${state.battleCount-r.results.length+i+1} ${esc(b.name)}</strong> / ${b.win?'勝利':b.retreated?'撤退':'敗北'} / ${b.rounds}T / 被ダメ${b.damage}<span class="muted tiny" style="display:block">${esc(b.actions.join(' ／ '))}</span></p>`).join('')}</details>`}</section>`;
 }
 function exploreHTML(){const f=state.floor,v=floors[f],done=state.kills[f],need=v.need,available=state.unlocked;
  return `<section class="panel"><div class="kicker">DUNGEON SELECT</div><h2 class="sectiontitle">迷宮を探索する</h2>
@@ -987,7 +1178,7 @@ function magicShopHTML(){
  <div class="itemlist">${inventory||'<div class="empty">まだ魔法を持っていません。</div>'}</div></section>`;
 }
 
-function townHTML(){return `<section class="panel"><h2 class="sectiontitle">拠点の施設</h2><div class="island-gate"><div><strong>⛵ カジノ島への航路</strong><p class="small muted">ゴールドをメダルに換えて遊ぶ娯楽の島。景品交換所には強力な武器も。</p></div><button class="btn gold" data-travel="casino">カジノ島へ渡る</button></div><div class="island-gate"><div><strong>🌲 魔の森への道</strong><p class="small muted">全50階、10階ごとにボス。進行度は通常迷宮と独立。将来は素材・魔法を掘る場所になる。</p></div><button class="btn primary" data-travel="forest">魔の森へ向かう</button></div><div class="shopnav">${[['weapon','武器屋'],['armor','防具屋'],['magic','魔法店'],['services','宿屋・鍛冶屋']].map(([k,n])=>`<button class="btn ${townSection===k?'primary':''}" data-town="${k}">${n}</button>`).join('')}</div></section>${townSection==='magic'?magicShopHTML():townSection==='services'?servicesHTML():shopHTML(townSection)}`;}
+function townHTML(){return `<section class="panel"><h2 class="sectiontitle">拠点の施設</h2><div class="island-gate"><div><strong>⛵ カジノ島への航路</strong><p class="small muted">ゴールドをメダルに換えて遊ぶ娯楽の島。景品交換所には強力な武器も。</p></div><button class="btn gold" data-travel="casino">カジノ島へ渡る</button></div><div class="island-gate"><div><strong>✦ 異世界への門</strong><p class="small muted">通常ボス25体と、出現率0.01%の『異世界に迷い込んだぴーるな』。勝利時は1%で魔法が落ちる。</p></div><button class="btn gold" data-travel="isekai">異世界へ挑む</button></div><div class="island-gate"><div><strong>🌲 魔の森への道</strong><p class="small muted">全50階、10階ごとにボス。進行度は通常迷宮と独立。将来は素材・魔法を掘る場所になる。</p></div><button class="btn primary" data-travel="forest">魔の森へ向かう</button></div><div class="shopnav">${[['weapon','武器屋'],['armor','防具屋'],['magic','魔法店'],['services','宿屋・鍛冶屋']].map(([k,n])=>`<button class="btn ${townSection===k?'primary':''}" data-town="${k}">${n}</button>`).join('')}</div></section>${townSection==='magic'?magicShopHTML():townSection==='services'?servicesHTML():shopHTML(townSection)}`;}
 function jobCardHTML(j){const p=state.jobProgress[j],selected=j===state.activeJob,needs=jobRequirements[j]?.masterJobs||[];
  const missing=needs.filter(x=>!isJobMaster(x)),locked=missing.length>0;
  const reqLabel=needs.length?needs.map(x=>jobs[x].name+'MASTER').join(' ＋ '):'条件なし';
@@ -1010,21 +1201,21 @@ function jobsHTML(){
 }
 function recordHTML(){return `<section class="panel"><div class="kicker">ADVENTURE JOURNAL</div><h2 class="sectiontitle">冒険記録とセーブ</h2><div class="info"><span class="pill">${num(state.wins)}勝・${state.deaths}敗</span><span class="pill">到達第${state.unlocked}層</span><span class="pill">鉱石${num(state.ore)}</span><span class="pill">魔の森：第${state.forest.unlocked}階</span></div>
  <p class="intro">v0.16：魔法使いへの改名と上級職7職を追加。MASTER条件で転職でき、育成は各職で独立。旧セーブを保持する。v0.13では全ボスにHP50%以下の暴走を追加。魔の森50階の原初王は麻痺と10倍攻撃を使用する。魔法「ウォール」は戦闘中の防御壁（最大HPの3倍まで）を張るドロップ専用品。開発用特別装備がある既存セーブにはウォールを1個だけ配布。各ジョブLv60で「マスター」となり、将来の上級職の条件に使用する。マスター専用の第2パッシブは未設定。旧セーブを保持し、ブラウザ内に保存する。</p><div class="buttonrow"><button class="btn primary" data-action="export">セーブを出力</button><button class="btn" data-action="import">JSONを読込</button><button class="btn danger" data-action="reset">セーブを初期化</button></div>
- <hr class="divider"><h3 class="sectiontitle">現行仕様</h3><div class="notice">6能力値：力（物理攻撃）、魔力（魔法攻撃）、生命力（HP成長）、器用さ（命中）、素早さ（回避・ターン行動回数）、運（命中・回避・スキル発動・魔力暴走・乱数報酬）。HPは派生値、MPなし。ATK・DEF・会心率・会心回復など旧補助ステータスは廃止。装備ドロップなし、職業ごとに固定5商品。数値は仮バランス。武器・胴防具に個別熟練度（通常上限2000、50EXPで+1）、熟練技は50ごとに5倍攻撃／最大HP10%回復ずつ成長し、熟練500で50倍／100%に到達。発動率は基本15%（オーラの結晶装備時45%）。武器の基本攻撃は熟練1につき+5、胴防具の基本防御は熟練1につき+1。魔法は別枠で1ターン最大1回。最大5000回・魔法店回復3000回まで。残り799回以下は魔法店では回復・合成不可。</div>
+ <hr class="divider"><p class="intro">全戦闘は最大150ターン。時間切れは撤退扱いでその敵のEXP70%、G0、勝利・敗北のどちらにも加算しません。</p><h3 class="sectiontitle">現行仕様</h3><div class="notice">6能力値：力（物理攻撃）、魔力（魔法攻撃）、生命力（HP成長）、器用さ（命中）、素早さ（回避・ターン行動回数）、運（命中・回避・スキル発動・魔力暴走・乱数報酬）。HPは派生値、MPなし。ATK・DEF・会心率・会心回復など旧補助ステータスは廃止。装備ドロップなし、職業ごとに固定5商品。数値は仮バランス。武器・胴防具に個別熟練度（通常上限2000、50EXPで+1）、熟練技は50ごとに5倍攻撃／最大HP10%回復ずつ成長し、熟練500で50倍／100%に到達。発動率は基本15%（オーラの結晶装備時45%）。武器の基本攻撃は熟練1につき+5、胴防具の基本防御は熟練1につき+1。魔法は別枠で1ターン最大1回。最大5000回・魔法店回復3000回まで。残り799回以下は魔法店では回復・合成不可。</div>
  <p class="intro">魔の森全50階。ボスは10階ごとに出現し、倒しても再戦可能。全ボスはHP50%以下で暴走し、敵攻撃1.5倍。最終ボスには20%で麻痺（次のターン行動不能＋敵の次の攻撃必中）、20%で命中率10%／威力10倍の大技を実装。ドロップテーブルは空のまま。数値は仮バランス。</p>
  ${state.lastAutoRun?`<hr class="divider"><h3 class="sectiontitle">前回の自動周回</h3><p class="intro">${esc(state.lastAutoRun.reason||'終了')} / ${state.lastAutoRun.dungeon==='forest'?'魔の森':'通常迷宮'} 第${num(state.lastAutoRun.floor)}${state.lastAutoRun.dungeon==='forest'?'階':'層'} / ${num(state.lastAutoRun.completed)}/${num(state.lastAutoRun.target)}戦 / EXP+${num(state.lastAutoRun.exp)} / ${num(state.lastAutoRun.gold)}G / 熟練EXP+${num(state.lastAutoRun.masteryExp)}</p>`:''}
  <hr class="divider"><h3 class="sectiontitle">直近の冒険ログ</h3>${state.history.slice(0,50).map(x=>`<div class="log"><div class="date">${esc(x.at)}</div><strong>${esc(x.headline)}</strong><p>${esc(x.body)}</p></div>`).join('')}</section>`;}
 // Casino Island is fully offline. Medals are earned only by exchanging in-game gold or games.
 function travel(destination){
- if(destination==='casino'||destination==='forest'){
+ if(destination==='casino'||destination==='forest'||destination==='isekai'){
   if(state.location!=='main'||tab!=='town')return;
   state.location=destination;tab=destination;
  }else if(destination==='main'){
-  if(!['casino','forest'].includes(state.location))return;
+  if(!['casino','forest','isekai'].includes(state.location))return;
   state.location='main';tab='town';
  }else return;
  lastResult=null;
- const label=destination==='main'?'拠点へ帰還':destination==='casino'?'カジノ島へ渡航':'魔の森へ入場';
+ const label=destination==='main'?'拠点へ帰還':destination==='casino'?'カジノ島へ渡航':destination==='forest'?'魔の森へ入場':'異世界へ入場';
  logEntry('移動',label);save();render();
 }
 function exchangeMedals(m){
@@ -1173,17 +1364,19 @@ function render(){
  const nav=document.querySelector('.nav');
  if(state.location==='casino'){
   tab='casino';nav.innerHTML='<button data-tab="casino" class="active">♠ カジノ島</button>';
+ }else if(state.location==='isekai'){
+  tab='isekai';nav.innerHTML='<button data-tab="isekai" class="active">✦ 異世界</button>';
  }else if(state.location==='forest'){
   tab='forest';nav.innerHTML='<button data-tab="forest" class="active">🌲 魔の森</button>';
  }else{
-  if(tab==='casino'||tab==='forest')tab='town';
+  if(tab==='casino'||tab==='forest'||tab==='isekai')tab='town';
   nav.innerHTML='<button data-tab="explore">⚔ 探索</button><button data-tab="gear">◇ 装備</button><button data-tab="town">⌂ 拠点</button><button data-tab="jobs">♜ ジョブ</button><button data-tab="record">≡ 記録</button>';
  }
  document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
- $('#view').innerHTML=tab==='casino'?casinoHTML():tab==='forest'?forestHTML():tab==='explore'?exploreHTML():tab==='gear'?gearHTML():tab==='town'?townHTML():tab==='jobs'?jobsHTML():recordHTML();
+ $('#view').innerHTML=tab==='casino'?casinoHTML():tab==='isekai'?isekaiHTML():tab==='forest'?forestHTML():tab==='explore'?exploreHTML():tab==='gear'?gearHTML():tab==='town'?townHTML():tab==='jobs'?jobsHTML():recordHTML();
 }
-function exportSave(){const blob=new Blob([JSON.stringify({app:'INFINITE_ABYSS',exportedAt:new Date().toISOString(),state},null,2)],{type:'application/json'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='abyss-v016-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast('JSON書き出し完了');}
-function importSave(file){if(!file)return;const rd=new FileReader();rd.onload=()=>{try{const data=JSON.parse(rd.result),s=data.state||data;if(!valid(upgradeState(s)))throw Error('v0.5/0.6形式のみ対応');if(!confirm('現在のデータを上書きします。続けますか？'))return;state=s;lastResult=null;tab=state.location==='casino'?'casino':state.location==='forest'?'forest':'explore';save();render();toast('データを復元しました');}catch(e){toast('読み込み失敗：'+e.message);}};rd.readAsText(file);}
+function exportSave(){const blob=new Blob([JSON.stringify({app:'INFINITE_ABYSS',exportedAt:new Date().toISOString(),state},null,2)],{type:'application/json'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='abyss-v017-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast('JSON書き出し完了');}
+function importSave(file){if(!file)return;const rd=new FileReader();rd.onload=()=>{try{const data=JSON.parse(rd.result),s=data.state||data;if(!valid(upgradeState(s)))throw Error('v0.5/0.6形式のみ対応');if(!confirm('現在のデータを上書きします。続けますか？'))return;state=s;lastResult=null;tab=state.location==='casino'?'casino':state.location==='forest'?'forest':state.location==='isekai'?'isekai':'explore';save();render();toast('データを復元しました');}catch(e){toast('読み込み失敗：'+e.message);}};rd.readAsText(file);}
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;
  if(b.dataset.auto==='stop'){finishAutoRun('手動停止');return;}
  if(autoSession?.running){toast('自動周回中は停止してから操作してください');return;}
@@ -1197,6 +1390,8 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||
  if(b.dataset.cas=== 'poker-draw'){drawPoker();return;}
  if(b.dataset.cas=== 'roulette'){playRoulette();return;}
  if(b.dataset.cas=== 'racing'){playRacing();return;}
+ if(b.dataset.isekairecord){toggleIsekaiRecord(Number(b.dataset.isekairecord));return;}
+ if(b.dataset.isekaifight){run(1,true,'isekai');return;}
  if(b.dataset.forestrecord){toggleForestRecord(Number(b.dataset.forestrecord));return;}
  if(b.dataset.forestfloor){setForestFloor(Number(b.dataset.forestfloor));return;}
  if(b.dataset.forestfight){run(Number(b.dataset.forestfight),false,'forest');return;}
@@ -1220,7 +1415,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&autoSession?.running)finishAutoRun('画面が非表示になったため停止');});
 window.addEventListener('pagehide',()=>{if(autoSession?.running)finishAutoRun('画面を閉じたため停止');});
 document.addEventListener('change',e=>{if(e.target.id==='gearFilter'){gearFilter=e.target.value;render();}if(e.target.id==='importFile'){importSave(e.target.files?.[0]);e.target.value='';}});
-window.ABYSS_DEBUG={autoRun:()=>autoSession?{...autoSnapshot(autoSession)}:null,lastAutoRun:()=>structuredClone(state.lastAutoRun||null),stopAutoRun:()=>finishAutoRun('手動停止'),startAutoRun,jobKeys:()=>[...jobKeys],jobMaster:j=>isJobMaster(j),masterPassives:()=>structuredClone(masterPassiveDefinitions),jobGroups:()=>({basic:[...basicJobKeys],advanced:[...advancedJobKeys]}),canChangeJob:j=>canChangeJob(j),changeJob:j=>changeJob(j),jobActions:()=>jobActionsPerTurn(derived().agi),power:itemId=>{const item=state.inventory.find(i=>i.id===itemId);return item?{...powerValues(item)}:null;},masteryProcRate:()=>masteryProcRate(),state:()=>structuredClone(state),magicCatalog:()=>structuredClone(MAGIC_CATALOG),buyMagic,restoreMagic,infuseMagic,extractMagic,equipMagic,magicProcRate:(key,mult,luk)=>magicProcRate({key},{multiplier:mult},luk),rollMagicTurn:()=>rollMagicTurn(false,derived().luk),mastery:itemId=>{const i=state.inventory.find(x=>x.id===itemId);return i?structuredClone(normalizeMastery(i)):null;},masteryTech:(itemId)=>masteryTechnique(state.inventory.find(x=>x.id===itemId)),gainMastery:()=>{const x=grantBattleMastery();save();render();return x;},stats:()=>derived(),bossRules:()=>({berserkHpRate:BOSS_BERSERK_HP_RATE,berserkAttackMultiplier:BOSS_BERSERK_DAMAGE_MULTIPLIER,paralysisRate:FINAL_BOSS_PARALYSIS_RATE,desperateRate:FINAL_BOSS_DESPERATE_RATE,desperateAccuracy:FINAL_BOSS_DESPERATE_ACCURACY,desperateDamageMultiplier:FINAL_BOSS_DESPERATE_DAMAGE_MULTIPLIER}),jobMasters:()=>Object.fromEntries(jobKeys.map(j=>[j,isJobMaster(j)])),activeMasterPassive:()=>activeMasterPassive(),jobRequirements:()=>structuredClone(jobRequirements),wallGift:()=>structuredClone(WALL_DEV_GIFT),shop:()=>structuredClone(shopCatalog),skills:j=>structuredClone(skills[j||state.activeJob]),reset:()=>{state=createState();save();render();},gainExp:n=>{const r=gainExperience(n);save();render();return r;},setState:s=>{if(!valid(upgradeState(s)))throw Error('invalid state');state=structuredClone(s);save();render();},casino:()=>structuredClone(state.casino),forest:()=>structuredClone(state.forest),forestRecords:()=>structuredClone(state.forest.battleRecords||[]),forestBosses:()=>structuredClone(FOREST_BOSSES),forestDrops:()=>structuredClone(FOREST_BOSS_DROP_TABLES),itemDefinitions:()=>structuredClone(ITEM_CATALOG),goForestFloor:n=>setForestFloor(n),fightForest:n=>run(n,isForestBossFloor(state.forest.floor),'forest'),grow:()=>structuredClone(levelGrowth),pokerResult:cards=>pokerResult(cards),rouletteWin:(c,n,p)=>rouletteWin(c,n,p),fight:n=>run(n),rollSkill:()=>rollSkill(),actions:()=>actionsPerTurn(derived().agi)};
+window.ABYSS_DEBUG={battleTurnLimit:()=>BATTLE_TURN_LIMIT,peelunaSpawnRate:()=>PEELUNA_SPAWN_RATE,peelunaPunchRate:()=>PEELUNA_PUNCH_RATE,rollIsekaiBoss:()=>rollIsekaiBoss().name,peeluna:()=>structuredClone(PEELUNA_BOSS),isekaiBosses:()=>structuredClone(ISEKAI_BOSSES),isekai:()=>structuredClone(state.isekai),isekaiDropRate:()=>ISEKAI_MAGIC_DROP_RATE,isekaiDropPool:()=>ISEKAI_MAGIC_DROP_POOL().map(({key,name,dropRarity})=>({key,name,dropRarity})),fightIsekai:()=>run(1,true,'isekai'),autoRun:()=>autoSession?{...autoSnapshot(autoSession)}:null,lastAutoRun:()=>structuredClone(state.lastAutoRun||null),stopAutoRun:()=>finishAutoRun('手動停止'),startAutoRun,jobKeys:()=>[...jobKeys],jobMaster:j=>isJobMaster(j),masterPassives:()=>structuredClone(masterPassiveDefinitions),jobGroups:()=>({basic:[...basicJobKeys],advanced:[...advancedJobKeys]}),canChangeJob:j=>canChangeJob(j),changeJob:j=>changeJob(j),jobActions:()=>jobActionsPerTurn(derived().agi),power:itemId=>{const item=state.inventory.find(i=>i.id===itemId);return item?{...powerValues(item)}:null;},masteryProcRate:()=>masteryProcRate(),state:()=>structuredClone(state),magicCatalog:()=>structuredClone(MAGIC_CATALOG),buyMagic,restoreMagic,infuseMagic,extractMagic,equipMagic,magicProcRate:(key,mult,luk)=>magicProcRate({key},{multiplier:mult},luk),rollMagicTurn:()=>rollMagicTurn(false,derived().luk),mastery:itemId=>{const i=state.inventory.find(x=>x.id===itemId);return i?structuredClone(normalizeMastery(i)):null;},masteryTech:(itemId)=>masteryTechnique(state.inventory.find(x=>x.id===itemId)),gainMastery:()=>{const x=grantBattleMastery();save();render();return x;},stats:()=>derived(),bossRules:()=>({berserkHpRate:BOSS_BERSERK_HP_RATE,berserkAttackMultiplier:BOSS_BERSERK_DAMAGE_MULTIPLIER,paralysisRate:FINAL_BOSS_PARALYSIS_RATE,desperateRate:FINAL_BOSS_DESPERATE_RATE,desperateAccuracy:FINAL_BOSS_DESPERATE_ACCURACY,desperateDamageMultiplier:FINAL_BOSS_DESPERATE_DAMAGE_MULTIPLIER}),jobMasters:()=>Object.fromEntries(jobKeys.map(j=>[j,isJobMaster(j)])),activeMasterPassive:()=>activeMasterPassive(),jobRequirements:()=>structuredClone(jobRequirements),wallGift:()=>structuredClone(WALL_DEV_GIFT),shop:()=>structuredClone(shopCatalog),skills:j=>structuredClone(skills[j||state.activeJob]),reset:()=>{state=createState();save();render();},gainExp:n=>{const r=gainExperience(n);save();render();return r;},setState:s=>{if(!valid(upgradeState(s)))throw Error('invalid state');state=structuredClone(s);save();render();},casino:()=>structuredClone(state.casino),forest:()=>structuredClone(state.forest),forestRecords:()=>structuredClone(state.forest.battleRecords||[]),forestBosses:()=>structuredClone(FOREST_BOSSES),forestDrops:()=>structuredClone(FOREST_BOSS_DROP_TABLES),itemDefinitions:()=>structuredClone(ITEM_CATALOG),goForestFloor:n=>setForestFloor(n),fightForest:n=>run(n,isForestBossFloor(state.forest.floor),'forest'),grow:()=>structuredClone(levelGrowth),pokerResult:cards=>pokerResult(cards),rouletteWin:(c,n,p)=>rouletteWin(c,n,p),fight:n=>run(n),rollSkill:()=>rollSkill(),actions:()=>actionsPerTurn(derived().agi)};
 save();render();
 })();
 </script>
