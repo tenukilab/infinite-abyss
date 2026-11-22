@@ -1,4 +1,4 @@
-# 技術設計・セーブ・検証（v0.20）
+# 技術設計・セーブ・検証（v0.21）
 
 > この文書は開発者／Codex向け。ソースの真実はルート `index.html`。変更時に差分を確認して更新する。
 
@@ -26,6 +26,7 @@
 | 移行・読み込み | `upgradeState()` / `valid()` / `readState()` | 旧セーブ互換性 |
 | 書き込み | `save()` | `localStorage` 保存 |
 | 画面 | `render()` / `renderHero()` 等 | 現在の画面を再構築 |
+| UIナビ | `uiSection` / `buildTab` / `moreTab` / `travel()` | 4項目ナビとダンジョン内閲覧。UI状態はセーブ外 |
 | 開発時の確認 | `window.ABYSS_DEBUG` | テスト用の各種公開メソッド |
 
 ## 3. セーブ構造
@@ -111,3 +112,13 @@
 3. JavaScript構文、操作、各種レグレッションを確認。
 4. GitHub `main` にコミットし、Pagesの最新デプロイ状態を確認。
 5. 既存セーブと互換性が必要な変更は、JSON書き出し／読み込みの両方を試す。
+
+## v0.21 UIの状態管理
+
+UI専用の `uiSection`、`buildTab`、`moreTab`、各折りたたみ状態は**実行中のメモリだけ**に持つ。永続セーブの `state.location` を表示切替だけで変更しない。
+
+- メインは **冒険／育成／図鑑／その他**。詳細は [UI設計](ui-navigation.md)。
+- 森・異世界・カジノでも4メニューを維持。育成は閲覧可能だが転職・装備変更・魔法店操作は拠点で行う。
+- `tab` の互換値は維持。魔法店は `state.location==='main' && tab==='town' && townSection==='magic'` の判定に依存する。
+- 既存セーブキー `infinite-abyss-save-v5`、`VERSION=5`、ゲームの能力値・装備・ジョブ等に変更なし。
+- 375/390/430pxのChromiumで画面遷移と滞在維持、10戦自動周回、JSONセーブ復元を回帰テスト済み。
