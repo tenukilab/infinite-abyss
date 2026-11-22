@@ -2,7 +2,7 @@
 
 ## 最初に読む
 1. `docs/README.md`（仕様の索引と優先順位）
-2. 変更対象に対応する `docs/*.md`（新通常モンスターは `docs/normal-dungeon-monsters.md`、UIは `docs/ui-navigation.md`、状態異常は `docs/status-effects.md`、図鑑は `docs/encyclopedia.md` を参照）
+2. 変更対象に対応する `docs/*.md`（ジョブ変更は `docs/jobs-and-skills.md` と `docs/job-tree.md`、新通常モンスターは `docs/normal-dungeon-monsters.md`、UIは `docs/ui-navigation.md`、状態異常は `docs/status-effects.md`、図鑑は `docs/encyclopedia.md` を参照）
 3. `index.html` の実装
 4. 必要時にルート `README.md` の履歴
 
@@ -14,6 +14,7 @@
 - 異世界ぴーるな：出現0.01%、攻撃命中0.001%（固定）、ねこパンチ毎ターン0.05%。26体を均等抽選して希少性を壊さない。
 - 特殊効果の追加・修正時は `docs/status-effects.md` に内部キー、発動条件、確率、効果、持続、予防/解除可否、対象ボスを追記する。ねこパンチの必中即死はリレイズでも防げない。
 - 通常迷宮は50層。既存の1〜5層と「腐敗した騎士」を残し、新200種は `MAIN_FAMILIES`×`MAIN_PHASES` から生成。`docs/normal-dungeon-monsters.md` に配置・成長曲線・各種数値を記録。旧ボス討伐済みセーブのみ第6層解放、既存の層別討伐数を保持。
+- ジョブは31職（下級6・中級7・複合9・特別1・上級8）。既存旧上級7職は内部ID不変で中級化。総合Lv上限100,000。グランドマスターは上級を除く自身以外22職MASTER、上級は全23職MASTER＋総合Lv100,000。新スキルや職追加時は`docs/job-tree.md`と`docs/jobs-and-skills.md`を更新し、循環条件を作らない。
 - 新しい敵・魔法や収集条件を追加するときは `docs/encyclopedia.md` を更新。図鑑の保存済み敵IDを無断変更しない。未遭遇の敵・魔法は秘密のままとし、旧戦績を根拠なく水増ししない。
 - UIのメインは冒険／育成／図鑑／その他の4項目。ダンジョン中も閲覧できるが、転職・装備変更・施設利用は拠点で行う。UI専用の `uiSection` / `buildTab` / `moreTab` はセーブに追加せず、タブ切替で `state.location` を変えない。
 - バランス値・未実装パッシブ・素材/魔法ドロップ・一部職業専用装備などはユーザーの決定なしに勝手に確定・追加しない。
