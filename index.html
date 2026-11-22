@@ -32,11 +32,11 @@
 </style>
 </head>
 <body>
-<main class="shell"><header class="mast"><div><div class="eyebrow">INFINITE ABYSS // PROTOTYPE 0.15</div><h1 class="brand">無限迷宮アビス</h1><div class="subtitle">強くなる理由など、強くなってから考えればいい。</div></div><div class="counter"><span class="chip" id="locationBadge">第1層</span><span class="coin" id="goldBadge">100 G</span></div></header><section class="hero" id="hero"></section><nav class="nav" aria-label="画面切り替え"><button data-tab="explore" class="active">⚔ 探索</button><button data-tab="gear">◇ 装備</button><button data-tab="town">⌂ 拠点</button><button data-tab="jobs">♜ ジョブ</button><button data-tab="record">≡ 記録</button></nav><div id="view" class="page" aria-live="polite"></div><footer class="foot">INSPIRED BY CLASSIC BROWSER RPGS · OFFLINE SINGLE-FILE GAME</footer></main><div class="toast" id="toast" role="status" aria-live="polite"></div><input id="importFile" type="file" accept="application/json,.json" hidden>
+<main class="shell"><header class="mast"><div><div class="eyebrow">INFINITE ABYSS // PROTOTYPE 0.16</div><h1 class="brand">無限迷宮アビス</h1><div class="subtitle">強くなる理由など、強くなってから考えればいい。</div></div><div class="counter"><span class="chip" id="locationBadge">第1層</span><span class="coin" id="goldBadge">100 G</span></div></header><section class="hero" id="hero"></section><nav class="nav" aria-label="画面切り替え"><button data-tab="explore" class="active">⚔ 探索</button><button data-tab="gear">◇ 装備</button><button data-tab="town">⌂ 拠点</button><button data-tab="jobs">♜ ジョブ</button><button data-tab="record">≡ 記録</button></nav><div id="view" class="page" aria-live="polite"></div><footer class="foot">INSPIRED BY CLASSIC BROWSER RPGS · OFFLINE SINGLE-FILE GAME</footer></main><div class="toast" id="toast" role="status" aria-live="polite"></div><input id="importFile" type="file" accept="application/json,.json" hidden>
 <script>
 'use strict';
 (()=>{
-// Infinite Abyss v0.15 — foreground-only, interruptible auto expedition.
+// Infinite Abyss v0.16 — seven master-gated advanced jobs. Auto expedition preserved.
 const KEY='infinite-abyss-save-v5';
 const OLD_KEYS=['infinite-abyss-save-v1','infinite-abyss-save-v2','infinite-abyss-save-v3','infinite-abyss-save-v4'];
 const VERSION=5, JOB_CAP=60, MAX_LEVEL=10000;
@@ -114,19 +114,44 @@ const levelGrowth={
  healer:{str:.20,mag:1,vit:1,dex:.55,agi:.45,luk:.35},
  thief:{str:1,mag:.10,vit:.55,dex:1,agi:1,luk:.40},
  archer:{str:1,mag:.10,vit:.50,dex:2,agi:.70,luk:.45},
- knight:{str:1,mag:.10,vit:2,dex:.50,agi:.20,luk:.20}
+ knight:{str:1,mag:.10,vit:2,dex:.50,agi:.20,luk:.20},
+ heavy_knight:{str:1.1,mag:.10,vit:3,dex:.45,agi:.20,luk:.25},
+ fencer:{str:2,mag:.10,vit:.70,dex:1.5,agi:1.25,luk:.45},
+ sorcerer:{str:.15,mag:3,vit:.80,dex:.9,agi:.50,luk:.50},
+ cleric:{str:.25,mag:1.75,vit:2,dex:.60,agi:.55,luk:.60},
+ elite_archer:{str:2,mag:.15,vit:.65,dex:3,agi:1,luk:.70},
+ acrobat:{str:1.4,mag:.20,vit:.65,dex:2.1,agi:2.5,luk:1},
+ bandit:{str:2.5,mag:.10,vit:1.1,dex:1.3,agi:1.4,luk:.75}
 };
 const jobs={
  fighter:{name:'戦士',eng:'WARRIOR',mode:'physical',base:[13,5,12,9,7,7],growth:[.85,.25,.85,.55,.4,.3],desc:'力と生命力を中心に成長する近接型。',passive:'今は固有パッシブなし（調整予定）'},
- mage:{name:'魔術師',eng:'MAGE',mode:'magic',base:[5,14,7,9,8,8],growth:[.25,1,.5,.6,.5,.35],desc:'魔力で攻撃する術師。',passive:'魔力暴走：攻撃命中時、運に応じた確率でダメージ2.5倍'},
+ mage:{name:'魔法使い',eng:'MAGE',mode:'magic',base:[5,14,7,9,8,8],growth:[.25,1,.5,.6,.5,.35],desc:'魔力で攻撃する術師。',passive:'魔力暴走：攻撃命中時、運に応じた確率でダメージ2.5倍'},
  healer:{name:'ヒーラー',eng:'HEALER',mode:'magic',base:[7,11,10,8,8,8],growth:[.35,.75,.8,.5,.5,.4],desc:'回復効果を持つ魔法スキルを使用する。',passive:'今は固有パッシブなし（調整予定）'},
  thief:{name:'シーフ',eng:'THIEF',mode:'physical',base:[10,6,8,12,13,9],growth:[.7,.3,.5,.9,1,.55],desc:'器用さと素早さを伸ばす連撃型。',passive:'今は固有パッシブなし（調整予定）'},
  archer:{name:'弓使い',eng:'ARCHER',mode:'physical',base:[10,5,8,16,11,9],growth:[.7,.2,.45,1.15,.7,.55],desc:'命中率と器用さを高める遠距離攻撃型。',passive:'照準：攻撃の命中率+10ポイント（最大99%）'},
- knight:{name:'ナイト',eng:'KNIGHT',mode:'physical',base:[12,5,16,9,6,7],growth:[.75,.2,1.2,.45,.25,.2],desc:'生命力が伸び、敵の攻撃を受け止める守備型。',passive:'守護：敵から受けるダメージを10%軽減'}
+ knight:{name:'ナイト',eng:'KNIGHT',mode:'physical',base:[12,5,16,9,6,7],growth:[.75,.2,1.2,.45,.25,.2],desc:'生命力が伸び、敵の攻撃を受け止める守備型。',passive:'守護：敵から受けるダメージを10%軽減'},
+ heavy_knight:{name:'重騎士',eng:'HEAVY KNIGHT',tier:'advanced',mode:'physical',base:[14,5,19,8,5,7],growth:[.9,.15,1.5,.45,.2,.25],desc:'厚い鎧で最前線を守る。ナイトMASTERから解放。',passive:'重装防御：被ダメージ20%軽減'},
+ fencer:{name:'フェンサー',eng:'FENCER',tier:'advanced',mode:'physical',base:[15,5,11,15,14,8],growth:[1.1,.2,.65,1,.95,.4],desc:'正確な剣撃で攻める技巧派。戦士MASTERから解放。',passive:'見切り：命中率+5ポイント（最大99%）'},
+ sorcerer:{name:'魔術師',eng:'SORCERER',tier:'advanced',mode:'magic',base:[5,20,9,12,10,10],growth:[.2,1.65,.7,.7,.5,.6],desc:'魔力を極限まで引き出す術者。魔法使いMASTERから解放。',passive:'魔力暴走：命中時に確率で与ダメージ×2.5'},
+ cleric:{name:'クレリック',eng:'CLERIC',tier:'advanced',mode:'magic',base:[8,16,16,10,9,10],growth:[.3,1.1,1.2,.55,.5,.55],desc:'祈りで戦線を支える聖職者。ヒーラーMASTERから解放。',passive:'聖なる加護：毎ターン最大HPの3%回復'},
+ elite_archer:{name:'アーチャー',eng:'MASTER ARCHER',tier:'advanced',mode:'physical',base:[15,5,9,21,14,11],growth:[1.1,.2,.55,1.6,.75,.65],desc:'精密な射撃の上級職。弓使いMASTERから解放。',passive:'精密照準：命中率+15ポイント（最大99%）'},
+ acrobat:{name:'曲芸師',eng:'ACROBAT',tier:'advanced',mode:'physical',base:[11,7,10,18,21,13],growth:[.95,.25,.65,1.2,1.45,.85],desc:'手数と身軽さで戦う。シーフと弓使いのMASTERが必要。',passive:'軽業：1ターンの攻撃回数+1'},
+ bandit:{name:'バンデット',eng:'BANDIT',tier:'advanced',mode:'physical',base:[17,5,12,16,15,11],growth:[1.3,.15,.85,1,.9,.65],desc:'力と技巧で報酬を奪う。戦士とシーフのMASTERが必要。',passive:'略奪：勝利時の獲得G+20%'}
 };
-const jobKeys=Object.keys(jobs);
-// All four base jobs have no prerequisite. Future upper jobs may require one or more master jobs.
-const jobRequirements=Object.fromEntries(jobKeys.map(j=>[j,{masterJobs:[]}]));
+const basicJobKeys=['fighter','mage','healer','thief','archer','knight'];
+const advancedJobKeys=['heavy_knight','fencer','sorcerer','cleric','elite_archer','acrobat','bandit'];
+const jobKeys=[...basicJobKeys,...advancedJobKeys];
+// Master prerequisites are ALWAYS checked against the saved master status of lower jobs.
+const jobRequirements={
+ ...Object.fromEntries(basicJobKeys.map(j=>[j,{masterJobs:[]}])),
+ heavy_knight:{masterJobs:['knight']},
+ fencer:{masterJobs:['fighter']},
+ sorcerer:{masterJobs:['mage']},
+ cleric:{masterJobs:['healer']},
+ elite_archer:{masterJobs:['archer']},
+ acrobat:{masterJobs:['thief','archer']},
+ bandit:{masterJobs:['fighter','thief']}
+};
 // Master bonuses apply ONLY while actively playing the mastered job.
 const masterPassiveDefinitions={
  fighter:{id:'last-stand',name:'不屈の闘志',desc:'HP50%以下で与ダメージ×1.25'},
@@ -134,7 +159,14 @@ const masterPassiveDefinitions={
  healer:{id:'life-spring',name:'生命の泉',desc:'毎ターン開始時に最大HPの5%回復'},
  thief:{id:'swift',name:'神速',desc:'1ターンの攻撃回数+1（最大5回）'},
  archer:{id:'weak-point',name:'弱点看破',desc:'命中時約25%で最終ダメージ×2（運で微増）'},
- knight:{id:'last-fortress',name:'不落の構え',desc:'HP50%以下で被ダメージをさらに30%軽減'}
+ knight:{id:'last-fortress',name:'不落の構え',desc:'HP50%以下で被ダメージをさらに30%軽減'},
+ heavy_knight:{id:'adamant',name:'金剛の守り',desc:'HP50%以下で被ダメージをさらに35%軽減'},
+ fencer:{id:'sword-dance',name:'剣舞',desc:'すべての攻撃ダメージ×1.2'},
+ sorcerer:{id:'archmage-peak',name:'秘奥の魔力',desc:'魔力暴走の倍率を×2.5→×4'},
+ cleric:{id:'holy-spring',name:'聖域の泉',desc:'毎ターンのHP回復量が3%→8%に増加'},
+ elite_archer:{id:'eagle-eye',name:'鷹の眼',desc:'命中時30%で最終ダメージ×2.5'},
+ acrobat:{id:'acrobatic-dance',name:'連舞',desc:'すべての攻撃ダメージ×1.2'},
+ bandit:{id:'plunder-master',name:'強奪',desc:'勝利時の獲得Gボーナスが20%→40%に増加'}
 };
 function isJobMaster(job){return !!jobs[job]&&(state.jobProgress?.[job]?.level||0)>=JOB_MASTER_LEVEL;}
 function activeMasterPassive(){return isJobMaster(state.activeJob)?masterPassiveDefinitions[state.activeJob]:null;}
@@ -185,6 +217,55 @@ const skills={
   {level:30,name:'城塞撃',power:1.65,rate:16,effect:{type:'guard',value:40}},
   {level:45,name:'騎士の祈り',power:1.8,rate:11,effect:{type:'heal',value:20}},
   {level:60,name:'不落の裁き',power:2.4,rate:7,effect:{type:'guard',value:50}}
+ ],
+ heavy_knight:[
+  {level:5,name:'重盾撃',power:1.4,rate:26,effect:{type:'guard',value:30}},
+  {level:15,name:'鉄壁突進',power:1.65,rate:20,effect:{type:'stun',value:1}},
+  {level:30,name:'不動の槍',power:1.9,rate:15,effect:{type:'guard',value:45}},
+  {level:45,name:'砦の鼓動',power:2.15,rate:11,effect:{type:'heal',value:45}},
+  {level:60,name:'金剛崩し',power:2.8,rate:7,effect:{type:'guard',value:60}}
+ ],
+ fencer:[
+  {level:5,name:'刺突',power:1.5,rate:27,effect:null},
+  {level:15,name:'返し刃',power:1.75,rate:22,effect:{type:'guard',value:15}},
+  {level:30,name:'稲妻の剣',power:2,rate:16,effect:{type:'stun',value:1}},
+  {level:45,name:'流麗連閃',power:2.5,rate:11,effect:null},
+  {level:60,name:'百花繚乱',power:3.3,rate:7,effect:null}
+ ],
+ sorcerer:[
+  {level:5,name:'魔炎',power:1.55,rate:26,effect:null},
+  {level:15,name:'魔氷縛',power:1.8,rate:20,effect:{type:'stun',value:1}},
+  {level:30,name:'雷霆',power:2.15,rate:16,effect:null},
+  {level:45,name:'魔力簒奪',power:2.6,rate:11,effect:{type:'drain',value:25}},
+  {level:60,name:'虚無崩壊',power:4,rate:6,effect:null}
+ ],
+ cleric:[
+  {level:5,name:'聖印',power:1.45,rate:26,effect:{type:'heal',value:15}},
+  {level:15,name:'祝福の槌',power:1.65,rate:20,effect:{type:'guard',value:25}},
+  {level:30,name:'神罰',power:2,rate:16,effect:null},
+  {level:45,name:'癒しの審判',power:2.35,rate:11,effect:{type:'heal',value:80}},
+  {level:60,name:'天上光臨',power:3,rate:7,effect:{type:'drain',value:35}}
+ ],
+ elite_archer:[
+  {level:5,name:'精密射撃',power:1.55,rate:27,effect:null},
+  {level:15,name:'貫通射',power:1.75,rate:21,effect:null},
+  {level:30,name:'束縛の矢',power:2,rate:16,effect:{type:'stun',value:1}},
+  {level:45,name:'星屑連射',power:2.65,rate:11,effect:null},
+  {level:60,name:'神弓の一閃',power:3.6,rate:7,effect:null}
+ ],
+ acrobat:[
+  {level:5,name:'軽業突き',power:1.45,rate:28,effect:null},
+  {level:15,name:'回転斬り',power:1.7,rate:21,effect:{type:'stun',value:1}},
+  {level:30,name:'跳躍連撃',power:2.05,rate:16,effect:null},
+  {level:45,name:'幻惑の刃',power:2.3,rate:12,effect:{type:'guard',value:25}},
+  {level:60,name:'空中乱舞',power:3.25,rate:7,effect:null}
+ ],
+ bandit:[
+  {level:5,name:'追い剥ぎ',power:1.5,rate:26,effect:null},
+  {level:15,name:'盗賊の刃',power:1.7,rate:21,effect:{type:'drain',value:15}},
+  {level:30,name:'粗暴な一撃',power:2.05,rate:16,effect:null},
+  {level:45,name:'略奪の奥義',power:2.6,rate:11,effect:{type:'stun',value:1}},
+  {level:60,name:'百戦の凶刃',power:3.4,rate:7,effect:{type:'drain',value:25}}
  ]
 };
 const effectText=e=>!e?'追加効果なし':({heal:'HP'+e.value+'回復',drain:'実ダメージの'+e.value+'%を吸収',stun:'敵の反撃を阻止',guard:'このターンの被ダメージ'+e.value+'%軽減'}[e.type]||'追加効果なし');
@@ -201,24 +282,24 @@ const boss=['腐敗した騎士',560,48,500,400];
 const slots=['weapon','head','body','hands','feet','accessory'];
 const slotName={weapon:'武器',head:'頭',body:'胴',hands:'手',feet:'足',accessory:'アクセサリー'};
 const shopTemplates=[
- {sku:'w',slot:'weapon',shop:'weapon',floor:1,level:1,price:80,baseAttack:30,stats:{str:2,mag:2},names:['訓練用の剣','見習いの杖','祈祷の杖','旅人の短剣','木製の弓','従騎士の槍']},
- {sku:'h',slot:'head',shop:'armor',floor:1,level:2,price:135,baseDefense:8,stats:{vit:1,dex:1},names:['戦士の帽子','術士の帽子','祈りの帽子','盗賊の頭巾','狩人の帽子','騎士の兜']},
- {sku:'b',slot:'body',shop:'armor',floor:2,level:4,price:230,baseDefense:15,stats:{vit:2},names:['守りの鎧','紺のローブ','聖布の法衣','夜風の外套','狩人の服','従騎士の鎧']},
- {sku:'g',slot:'hands',shop:'armor',floor:2,level:5,price:320,baseDefense:5,stats:{str:1,mag:1,dex:1},names:['冒険者の籠手','魔導の手袋','癒しの手袋','軽業の手袋','射手の手袋','鉄の籠手']},
- {sku:'f',slot:'feet',shop:'armor',floor:3,level:7,price:450,baseDefense:6,stats:{agi:2,luk:1},names:['踏破のブーツ','軽羽の靴','巡礼の靴','疾風の靴','駿足の靴','鋼鉄のブーツ']}
+ {sku:'w',slot:'weapon',shop:'weapon',floor:1,level:1,price:80,baseAttack:30,stats:{str:2,mag:2},names:['訓練用の剣','見習いの杖','祈祷の杖','旅人の短剣','木製の弓','従騎士の槍','重鋼の槍','細身の剣','秘術の杖','聖なる錫杖','狙撃の長弓','軽業の短剣','略奪の大鉈']},
+ {sku:'h',slot:'head',shop:'armor',floor:1,level:2,price:135,baseDefense:8,stats:{vit:1,dex:1},names:['戦士の帽子','術士の帽子','祈りの帽子','盗賊の頭巾','狩人の帽子','騎士の兜','重鋼の兜','剣士の羽帽子','魔導士の冠','聖職者の冠','射手の兜','曲芸師の帽子','無頼の頭巾']},
+ {sku:'b',slot:'body',shop:'armor',floor:2,level:4,price:230,baseDefense:15,stats:{vit:2},names:['守りの鎧','紺のローブ','聖布の法衣','夜風の外套','狩人の服','従騎士の鎧','重騎士の甲冑','剣士の胴着','深紫の法衣','清浄のローブ','射手の革鎧','曲芸師の衣装','略奪者の鎧']},
+ {sku:'g',slot:'hands',shop:'armor',floor:2,level:5,price:320,baseDefense:5,stats:{str:1,mag:1,dex:1},names:['冒険者の籠手','魔導の手袋','癒しの手袋','軽業の手袋','射手の手袋','鉄の籠手','剛腕の籠手','細剣の手袋','魔力の手袋','祝福の手袋','鷹眼の手袋','器用な手袋','盗賊の籠手']},
+ {sku:'f',slot:'feet',shop:'armor',floor:3,level:7,price:450,baseDefense:6,stats:{agi:2,luk:1},names:['踏破のブーツ','軽羽の靴','巡礼の靴','疾風の靴','駿足の靴','鋼鉄のブーツ','重鋼のブーツ','剣舞の靴','魔術師の靴','癒しの靴','遠見の靴','空中の靴','無頼のブーツ']}
 ];
 const shopCatalog=jobKeys.flatMap((job,j)=>shopTemplates.map(t=>{
  const stat={...t.stats};
  if(t.slot==='weapon')stat[jobs[job].mode==='magic'?'mag':'str']+=1;
  // Tiny class modifiers are temporary; all jobs share the same price tier.
- const mods=[0,5,-5,10,0,5];
+ const mods=[0,5,-5,10,0,5,20,15,20,10,15,15,20];
  return {sku:job+'-'+t.sku,job,name:t.names[j],slot:t.slot,shop:t.shop,floor:t.floor,level:t.level,price:t.price+mods[j],stat,baseAttack:t.baseAttack||0,baseDefense:t.baseDefense||0,maxMastery:DEFAULT_MASTERY_CAP};
 }));
 // All casino prices are medals. They have no cash value, purchase channel or cash-out.
 const GOLD_PER_MEDAL=10;
 const horseRoster=[{name:'暁の疾風',weight:40,payout:2},{name:'銀嶺の雫',weight:30,payout:3},{name:'黒曜の牙',weight:20,payout:5},{name:'月影の流星',weight:10,payout:9}];
 const casinoPrizes=[
- ...jobKeys.map(j=>({sku:'relic-'+j,kind:'weapon',job:j,maxMastery:DEFAULT_MASTERY_CAP,name:({fighter:'王断の大剣',mage:'星詠みの大杖',healer:'天啓の聖杖',thief:'幽影の短剣',archer:'流星の長弓',knight:'守護者の聖槍'})[j],cost:2000,baseAttack:750,stat:({fighter:{str:48,vit:10,dex:7},mage:{mag:48,vit:10,luk:7},healer:{mag:48,vit:12,luk:5},thief:{str:48,agi:11,dex:7},archer:{str:48,dex:13,agi:5},knight:{str:48,vit:14,dex:5}})[j]})),
+ ...basicJobKeys.map(j=>({sku:'relic-'+j,kind:'weapon',job:j,maxMastery:DEFAULT_MASTERY_CAP,name:({fighter:'王断の大剣',mage:'星詠みの大杖',healer:'天啓の聖杖',thief:'幽影の短剣',archer:'流星の長弓',knight:'守護者の聖槍'})[j],cost:2000,baseAttack:750,stat:({fighter:{str:48,vit:10,dex:7},mage:{mag:48,vit:10,luk:7},healer:{mag:48,vit:12,luk:5},thief:{str:48,agi:11,dex:7},archer:{str:48,dex:13,agi:5},knight:{str:48,vit:14,dex:5}})[j]})),
  {sku:'rust-origin',kind:'material',name:'錆びた始原剣',cost:500,description:'将来の最強武器合成の土台。素材収集・合成機能は未実装。現時点では装備不可。'}
 ];
 const blankSlots=()=>Object.fromEntries(slots.map(s=>[s,null]));
@@ -317,7 +398,7 @@ function upgradeState(s){if(!s||s.version!==VERSION||!jobs[s.activeJob])return s
  s.autoRunProgress=null;
  if(!s.baseStats)s.baseStats=jobAttributes(s.activeJob,s.level); // retain v0.5's current stat progression
  normalizeForest(s);
- // v0.14: append two new lower jobs to old saves without modifying earned stats or equipment.
+ // v0.16: append new upper jobs to old saves; preserve all earned stats, mastery, and inventory.
  if(!s.jobProgress||typeof s.jobProgress!=='object')s.jobProgress={};
  if(!s.loadouts||typeof s.loadouts!=='object')s.loadouts={};
  for(const j of jobKeys){
@@ -414,9 +495,9 @@ function derived(){
  d.maxHP=50+4*d.vit+state.hpGrowth;return d;
 }
 function actionsPerTurn(agi){return 1+Math.min(3,Math.floor(agi/20));}
-function jobActionsPerTurn(agi){return actionsPerTurn(agi)+(activeMasterPassive()?.id==='swift'?1:0);}
+function jobActionsPerTurn(agi){return actionsPerTurn(agi)+(activeMasterPassive()?.id==='swift'||state.activeJob==='acrobat'?1:0);}
 function playerAccuracy(d,foe){const base=accuracy(d.dex,foe.agi,d.luk,foe.luk);
- return state.activeJob==='archer'?Math.min(99,base+10):base;
+ return ['archer','elite_archer','fencer'].includes(state.activeJob)?Math.min(99,base+(state.activeJob==='archer'?10:state.activeJob==='elite_archer'?15:5)):base;
 }
 function archerMasterRate(luk){return clamp(25+(luk-8)*.08,0,50);}
 // Hit and dodge derive from dexterity, agility and both participants' luck.
@@ -517,9 +598,10 @@ function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?fo
   try{
   const d=derived();const stunned=paralyzeTurns>0;if(stunned)paralyzeTurns--;
   const master=activeMasterPassive();
-  if(master?.id==='life-spring'){
-   const recovered=recover(Math.ceil(d.maxHP*.05));
-   if(recovered>0)record('【生命の泉】HP+'+num(recovered));
+  if(master?.id==='life-spring'||state.activeJob==='cleric'){
+   const rate=state.activeJob==='cleric'?(master?.id==='holy-spring'?.08:.03):.05;
+   const recovered=recover(Math.ceil(d.maxHP*rate));
+   if(recovered>0)record('【'+(state.activeJob==='cleric'?'聖なる加護':'生命の泉')+'】HP+'+num(recovered));
   }
   const attacks=stunned?0:jobActionsPerTurn(d.agi);let stopped=false,guard=0;
   if(stunned)record('【麻痺】このターンは行動不能');
@@ -552,22 +634,24 @@ function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?fo
    const variance=.90+rand()*.20+Math.min(.06,d.luk/700);
    let hit=Math.max(1,Math.round((2+raw*2.05+d.baseAttack)*variance*(sk?.power||1)));
    // Mage's magic surge stays a passive mechanic, not a seventh character stat.
-   const surged=state.activeJob==='mage'&&rand()*100<surgeRate(d.luk);
-   if(surged){hit=Math.round(hit*(master?.id==='arcane-peak'?3.5:2.5));surges++;}
+   const surged=['mage','sorcerer'].includes(state.activeJob)&&rand()*100<surgeRate(d.luk);
+   if(surged){hit=Math.round(hit*(master?.id==='arcane-peak'?3.5:master?.id==='archmage-peak'?4:2.5));surges++;}
    const weapon=equippedMastery('weapon'),weaponTier=masteryTier(weapon);
    const masteryStrike=weaponTier>0&&rand()*100<masteryProcRate();
    if(masteryStrike)hit=Math.round(hit*(weaponTier*5));
    if(beerActive)hit=Math.round(hit*1.2);
    const warriorBoost=master?.id==='last-stand'&&state.hp<=d.maxHP*.5;
    if(warriorBoost)hit=Math.round(hit*1.25);
-   const archerBoost=master?.id==='weak-point'&&rand()*100<archerMasterRate(d.luk);
-   if(archerBoost)hit=Math.round(hit*2);
+   const archerBoost=['weak-point','eagle-eye'].includes(master?.id)&&rand()*100<(master?.id==='eagle-eye'?30:archerMasterRate(d.luk));
+   if(archerBoost)hit=Math.round(hit*(master?.id==='eagle-eye'?2.5:2));
+   const advancedAttackBoost=['sword-dance','acrobatic-dance'].includes(master?.id);
+   if(advancedAttackBoost)hit=Math.round(hit*1.2);
    const dealt=Math.min(hp,hit);hp=Math.max(0,hp-hit);let extra='';
    if(sk?.effect?.type==='heal')extra=' / HP+'+recover(sk.effect.value);
    if(sk?.effect?.type==='drain')extra=' / HP吸収+'+recover(dealt*sk.effect.value/100);
    if(sk?.effect?.type==='stun')stopped=true;
    if(sk?.effect?.type==='guard')guard=Math.max(guard,sk.effect.value);
-   record('T'+rounds+' '+(sk?'【'+sk.name+'】':'通常攻撃')+(surged?'［魔力暴走×'+(master?.id==='arcane-peak'?3.5:2.5)+'］':'')+(masteryStrike?'［極撃×'+(weaponTier*5)+'］':'')+(warriorBoost?'［不屈の闘志×1.25］':'')+(archerBoost?'［弱点看破×2］':'')+' '+hit+'ダメージ'+extra);
+   record('T'+rounds+' '+(sk?'【'+sk.name+'】':'通常攻撃')+(surged?'［魔力暴走×'+(master?.id==='archmage-peak'?4:master?.id==='arcane-peak'?3.5:2.5)+'］':'')+(masteryStrike?'［極撃×'+(weaponTier*5)+'］':'')+(warriorBoost?'［不屈の闘志×1.25］':'')+(archerBoost?'［'+(master?.id==='eagle-eye'?'鷹の眼×2.5':'弱点看破×2')+'］':'')+(advancedAttackBoost?'［'+master.name+'×1.2］':'')+' '+hit+'ダメージ'+extra);
   }
   if(hp<=0)break;
   if(isBoss&&!berserk&&hp<=foe.hp*BOSS_BERSERK_HP_RATE){berserk=true;record('【暴走】ボスHP50%以下：以降の攻撃ダメージ×'+BOSS_BERSERK_DAMAGE_MULTIPLIER);}
@@ -591,8 +675,11 @@ function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?fo
   if(guard)enemyHit=Math.max(1,Math.ceil(enemyHit*(1-guard/100)));
   // Defensive passives reduce damage before the Wall absorbs it.
   if(state.activeJob==='knight')enemyHit=Math.max(1,Math.ceil(enemyHit*.90));
+  if(state.activeJob==='heavy_knight')enemyHit=Math.max(1,Math.ceil(enemyHit*.80));
   const knightMasterGuard=master?.id==='last-fortress'&&state.hp<=d2.maxHP*.5;
   if(knightMasterGuard)enemyHit=Math.max(1,Math.ceil(enemyHit*.70));
+  const heavyKnightMasterGuard=master?.id==='adamant'&&state.hp<=d2.maxHP*.5;
+  if(heavyKnightMasterGuard)enemyHit=Math.max(1,Math.ceil(enemyHit*.65));
   if(berserk)enemyHit=Math.max(1,Math.round(enemyHit*BOSS_BERSERK_DAMAGE_MULTIPLIER));
   if(desperate)enemyHit=Math.max(1,Math.round(enemyHit*FINAL_BOSS_DESPERATE_DAMAGE_MULTIPLIER));
   const shieldAbsorbed=Math.min(wallHp,enemyHit);wallHp-=shieldAbsorbed;
@@ -601,7 +688,7 @@ function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?fo
   const armor=equippedMastery('body'),armorTier=masteryTier(armor);
   const masteryHeal=state.hp>0&&armorTier>0&&rand()*100<masteryProcRate();
   const recovered=masteryHeal?recover(Math.ceil(derived().maxHP*armorTier*.10)):0;
-  record('敵の攻撃 '+num(enemyHit)+'ダメージ'+(desperate?'［原初の壊撃×10］':'')+(berserk?'［暴走×1.5］':'')+(state.activeJob==='knight'?'［守護−10%］':'')+(knightMasterGuard?'［不落の構え−30%］':'')+(shieldAbsorbed?'［壁が'+num(shieldAbsorbed)+'吸収・残'+num(wallHp)+'］':'')+' / HP被害 '+num(healthDamage)+(masteryHeal?'［再生：HP+'+recovered+'］':''));
+  record('敵の攻撃 '+num(enemyHit)+'ダメージ'+(desperate?'［原初の壊撃×10］':'')+(berserk?'［暴走×1.5］':'')+(state.activeJob==='knight'?'［守護−10%］':'')+(state.activeJob==='heavy_knight'?'［重装防御−20%］':'')+(knightMasterGuard?'［不落の構え−30%］':'')+(heavyKnightMasterGuard?'［金剛の守り−35%］':'')+(shieldAbsorbed?'［壁が'+num(shieldAbsorbed)+'吸収・残'+num(wallHp)+'］':'')+' / HP被害 '+num(healthDamage)+(masteryHeal?'［再生：HP+'+recovered+'］':''));
   if(state.hp<=0){failed=true;break;}
   }finally{if(turnInfo){turnInfo.playerHpAfter=state.hp;turnInfo.enemyHpAfter=hp;turnInfo.wallAfter=wallHp;}}
  }
@@ -626,7 +713,8 @@ function fightOne(f,isBoss=false,dungeon='main'){const foe=dungeon==='forest'?fo
    if(forest.unlocked===f&&f<FOREST_MAX_FLOOR&&forest.kills[f]>=FOREST_WINS_TO_ADVANCE)forest.unlocked=f+1;
   }
  }else state.kills[f]++;
- const gold=foe.gold+ri(0,Math.max(1,Math.floor(derived().luk/8)));
+ const baseGold=foe.gold+ri(0,Math.max(1,Math.floor(derived().luk/8)));
+ const gold=state.activeJob==='bandit'?Math.floor(baseGold*(activeMasterPassive()?.id==='plunder-master'?1.4:1.2)):baseGold;
  state.gold+=gold;const levels=gainExperience(foe.exp);
  let ore=0;
  if(dungeon==='main'&&f>=3&&rand()<clamp(.25+derived().luk*.002,0,.85)){ore=ri(1,Math.max(1,f-2));state.ore+=ore;}
@@ -900,11 +988,28 @@ function magicShopHTML(){
 }
 
 function townHTML(){return `<section class="panel"><h2 class="sectiontitle">拠点の施設</h2><div class="island-gate"><div><strong>⛵ カジノ島への航路</strong><p class="small muted">ゴールドをメダルに換えて遊ぶ娯楽の島。景品交換所には強力な武器も。</p></div><button class="btn gold" data-travel="casino">カジノ島へ渡る</button></div><div class="island-gate"><div><strong>🌲 魔の森への道</strong><p class="small muted">全50階、10階ごとにボス。進行度は通常迷宮と独立。将来は素材・魔法を掘る場所になる。</p></div><button class="btn primary" data-travel="forest">魔の森へ向かう</button></div><div class="shopnav">${[['weapon','武器屋'],['armor','防具屋'],['magic','魔法店'],['services','宿屋・鍛冶屋']].map(([k,n])=>`<button class="btn ${townSection===k?'primary':''}" data-town="${k}">${n}</button>`).join('')}</div></section>${townSection==='magic'?magicShopHTML():townSection==='services'?servicesHTML():shopHTML(townSection)}`;}
-function jobsHTML(){const cards=jobKeys.map(j=>{const p=state.jobProgress[j],selected=j===state.activeJob;return `<div class="jobcard ${selected?'active':''}"><div class="split"><h3>${jobs[j].name}</h3><span class="pill ${p.level>=JOB_MASTER_LEVEL?'gold':selected?'good':''}">${p.level>=JOB_MASTER_LEVEL?'★ MASTER':selected?'現在のジョブ':'Lv.'+p.level}</span></div><p>${jobs[j].desc}</p><div class="small">ジョブLv ${p.level}/${JOB_CAP} · ${p.level===JOB_CAP?'MAX':'次まで '+num(expNeed(p.level)-p.xp)+' EXP'}</div><div class="progressline"><span style="width:${p.level===JOB_CAP?100:p.xp/expNeed(p.level)*100}%"></span></div><button class="btn ${selected?'':'primary'}" data-job="${j}" ${selected?'disabled':''}>${selected?'選択中':'転職する'}</button><div class="small muted">第1パッシブ：${jobs[j].passive}</div><div class="masterypassive"><strong>${p.level>=JOB_MASTER_LEVEL?'★ マスター認定済み':'☆ マスター未到達（Lv.60）'}</strong><span>第2パッシブ：${masterPassiveDefinitions[j]?.name}（${masterPassiveDefinitions[j]?.desc}）${selected&&p.level>=JOB_MASTER_LEVEL?'【発動中】':''}</span></div><details class="skilldetails" ${selected?'open':''}><summary>スキル ${skills[j].filter(s=>s.level<=p.level).length}/5習得</summary><div class="skilllist">${skills[j].map(s=>`<div class="skillentry ${p.level<s.level?'locked':''}"><div class="split"><strong>${s.name}</strong><span class="pill">ジョブLv.${s.level}</span></div><div class="small">威力×${s.power.toFixed(2)} / 基礎発動率${s.rate}%</div><div class="tiny muted">${effectText(s.effect)}</div></div>`).join('')}</div></details></div>`;}).join('');
- return `<section class="panel"><div class="kicker">ADVENTURER GUILD</div><h2 class="sectiontitle">ジョブ・転職</h2><p class="intro">総合Lvは共通。獲得EXPは総合・現在ジョブの両方へ加算。ジョブLv60でマスター認定。マスター済み職は将来の転職解放条件に使う。ジョブマスターの第2パッシブは、そのマスター職に就いている間だけ発動する。スキルは5/15/30/45/60で解放、MPなし。</p><div class="info"><span class="pill gold">ジョブマスター ${jobMasterCount()} / ${jobKeys.length}</span><span class="pill">マスター職は将来の転職条件に利用</span></div><div class="jobcards" style="margin-top:12px">${cards}</div><p class="hint">転職時は総合Lvを維持し、6能力値・HP・装備は変わらない。購入できる武具のラインナップとジョブスキルは職業別。</p></section>`;
+function jobCardHTML(j){const p=state.jobProgress[j],selected=j===state.activeJob,needs=jobRequirements[j]?.masterJobs||[];
+ const missing=needs.filter(x=>!isJobMaster(x)),locked=missing.length>0;
+ const reqLabel=needs.length?needs.map(x=>jobs[x].name+'MASTER').join(' ＋ '):'条件なし';
+ return `<div class="jobcard ${selected?'active':''} ${locked?'locked':''}"><div class="split"><h3>${esc(jobs[j].name)}</h3><span class="pill ${p.level>=JOB_MASTER_LEVEL?'gold':selected?'good':''}">${p.level>=JOB_MASTER_LEVEL?'★ MASTER':selected?'現在のジョブ':'Lv.'+p.level}</span></div>
+ ${jobs[j].tier==='advanced'?`<div class="tiny ${locked?'error':'ok'}">${locked?'🔒 未解放':'✓ 転職可能'} · ${esc(reqLabel)}</div>`:''}
+ <p>${esc(jobs[j].desc)}</p><div class="small">ジョブLv ${p.level}/${JOB_CAP} · ${p.level===JOB_CAP?'MAX':'次まで '+num(expNeed(p.level)-p.xp)+' EXP'}</div><div class="progressline"><span style="width:${p.level===JOB_CAP?100:p.xp/expNeed(p.level)*100}%"></span></div>
+ <button class="btn ${selected||locked?'':'primary'}" data-job="${j}" ${selected||locked?'disabled':''}>${selected?'選択中':locked?'MASTER条件未達':'転職する'}</button>
+ <div class="small muted">第1パッシブ：${esc(jobs[j].passive)}</div>
+ <div class="masterypassive"><strong>${p.level>=JOB_MASTER_LEVEL?'★ マスター認定済み':'☆ マスター未到達（Lv.60）'}</strong><span>第2パッシブ：${esc(masterPassiveDefinitions[j].name)}（${esc(masterPassiveDefinitions[j].desc)}）${selected&&p.level>=JOB_MASTER_LEVEL?'【発動中】':''}</span></div>
+ <details class="skilldetails" ${selected?'open':''}><summary>スキル ${skills[j].filter(s=>s.level<=p.level).length}/5習得</summary><div class="skilllist">${skills[j].map(skill=>`<div class="skillentry ${p.level<skill.level?'locked':''}"><div class="split"><strong>${esc(skill.name)}</strong><span class="pill">ジョブLv.${skill.level}</span></div><div class="small">威力×${skill.power.toFixed(2)} / 基礎発動率${skill.rate}%</div><div class="tiny muted">${effectText(skill.effect)}</div></div>`).join('')}</div></details></div>`;
+}
+function jobsHTML(){
+ const basic=basicJobKeys.map(jobCardHTML).join(''),advanced=advancedJobKeys.map(jobCardHTML).join('');
+ const unlocked=advancedJobKeys.filter(canChangeJob).length;
+ return `<section class="panel"><div class="kicker">ADVENTURER GUILD</div><h2 class="sectiontitle">ジョブ・転職</h2><p class="intro">総合Lvは共通。LvUP時だけ、現在のジョブに応じて6能力値が永久加算。転職時は能力値・HP・装備を保持。ジョブLv.60でMASTER認定され、上級職を解放できる。スキルは5/15/30/45/60で習得。</p>
+ <div class="info"><span class="pill gold">MASTER ${jobMasterCount()} / ${jobKeys.length}</span><span class="pill blue">上級職解放 ${unlocked} / ${advancedJobKeys.length}</span></div>
+ <h3 class="sectiontitle" style="margin-top:20px">下級職（6職）</h3><div class="jobcards">${basic}</div>
+ <hr class="divider"><h3 class="sectiontitle">上級職（7職）</h3><p class="intro">指定された下級職のMASTERが必要。複数条件はすべて達成する必要がある。上級職もLv.1から独立育成し、Lv.60でマスターできる。</p><div class="jobcards">${advanced}</div>
+ <p class="hint" style="margin-top:14px">第2パッシブはその職業がMASTERで、かつ現在その職業に就いているときだけ発動。上級職のパラメータ・スキル・パッシブは仮バランス。</p></section>`;
 }
 function recordHTML(){return `<section class="panel"><div class="kicker">ADVENTURE JOURNAL</div><h2 class="sectiontitle">冒険記録とセーブ</h2><div class="info"><span class="pill">${num(state.wins)}勝・${state.deaths}敗</span><span class="pill">到達第${state.unlocked}層</span><span class="pill">鉱石${num(state.ore)}</span><span class="pill">魔の森：第${state.forest.unlocked}階</span></div>
- <p class="intro">v0.13では全ボスにHP50%以下の暴走を追加。魔の森50階の原初王は麻痺と10倍攻撃を使用する。魔法「ウォール」は戦闘中の防御壁（最大HPの3倍まで）を張るドロップ専用品。開発用特別装備がある既存セーブにはウォールを1個だけ配布。各ジョブLv60で「マスター」となり、将来の上級職の条件に使用する。マスター専用の第2パッシブは未設定。旧セーブを保持し、ブラウザ内に保存する。</p><div class="buttonrow"><button class="btn primary" data-action="export">セーブを出力</button><button class="btn" data-action="import">JSONを読込</button><button class="btn danger" data-action="reset">セーブを初期化</button></div>
+ <p class="intro">v0.16：魔法使いへの改名と上級職7職を追加。MASTER条件で転職でき、育成は各職で独立。旧セーブを保持する。v0.13では全ボスにHP50%以下の暴走を追加。魔の森50階の原初王は麻痺と10倍攻撃を使用する。魔法「ウォール」は戦闘中の防御壁（最大HPの3倍まで）を張るドロップ専用品。開発用特別装備がある既存セーブにはウォールを1個だけ配布。各ジョブLv60で「マスター」となり、将来の上級職の条件に使用する。マスター専用の第2パッシブは未設定。旧セーブを保持し、ブラウザ内に保存する。</p><div class="buttonrow"><button class="btn primary" data-action="export">セーブを出力</button><button class="btn" data-action="import">JSONを読込</button><button class="btn danger" data-action="reset">セーブを初期化</button></div>
  <hr class="divider"><h3 class="sectiontitle">現行仕様</h3><div class="notice">6能力値：力（物理攻撃）、魔力（魔法攻撃）、生命力（HP成長）、器用さ（命中）、素早さ（回避・ターン行動回数）、運（命中・回避・スキル発動・魔力暴走・乱数報酬）。HPは派生値、MPなし。ATK・DEF・会心率・会心回復など旧補助ステータスは廃止。装備ドロップなし、職業ごとに固定5商品。数値は仮バランス。武器・胴防具に個別熟練度（通常上限2000、50EXPで+1）、熟練技は50ごとに5倍攻撃／最大HP10%回復ずつ成長し、熟練500で50倍／100%に到達。発動率は基本15%（オーラの結晶装備時45%）。武器の基本攻撃は熟練1につき+5、胴防具の基本防御は熟練1につき+1。魔法は別枠で1ターン最大1回。最大5000回・魔法店回復3000回まで。残り799回以下は魔法店では回復・合成不可。</div>
  <p class="intro">魔の森全50階。ボスは10階ごとに出現し、倒しても再戦可能。全ボスはHP50%以下で暴走し、敵攻撃1.5倍。最終ボスには20%で麻痺（次のターン行動不能＋敵の次の攻撃必中）、20%で命中率10%／威力10倍の大技を実装。ドロップテーブルは空のまま。数値は仮バランス。</p>
  ${state.lastAutoRun?`<hr class="divider"><h3 class="sectiontitle">前回の自動周回</h3><p class="intro">${esc(state.lastAutoRun.reason||'終了')} / ${state.lastAutoRun.dungeon==='forest'?'魔の森':'通常迷宮'} 第${num(state.lastAutoRun.floor)}${state.lastAutoRun.dungeon==='forest'?'階':'層'} / ${num(state.lastAutoRun.completed)}/${num(state.lastAutoRun.target)}戦 / EXP+${num(state.lastAutoRun.exp)} / ${num(state.lastAutoRun.gold)}G / 熟練EXP+${num(state.lastAutoRun.masteryExp)}</p>`:''}
@@ -1077,7 +1182,7 @@ function render(){
  document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
  $('#view').innerHTML=tab==='casino'?casinoHTML():tab==='forest'?forestHTML():tab==='explore'?exploreHTML():tab==='gear'?gearHTML():tab==='town'?townHTML():tab==='jobs'?jobsHTML():recordHTML();
 }
-function exportSave(){const blob=new Blob([JSON.stringify({app:'INFINITE_ABYSS',exportedAt:new Date().toISOString(),state},null,2)],{type:'application/json'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='abyss-v015-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast('JSON書き出し完了');}
+function exportSave(){const blob=new Blob([JSON.stringify({app:'INFINITE_ABYSS',exportedAt:new Date().toISOString(),state},null,2)],{type:'application/json'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='abyss-v016-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast('JSON書き出し完了');}
 function importSave(file){if(!file)return;const rd=new FileReader();rd.onload=()=>{try{const data=JSON.parse(rd.result),s=data.state||data;if(!valid(upgradeState(s)))throw Error('v0.5/0.6形式のみ対応');if(!confirm('現在のデータを上書きします。続けますか？'))return;state=s;lastResult=null;tab=state.location==='casino'?'casino':state.location==='forest'?'forest':'explore';save();render();toast('データを復元しました');}catch(e){toast('読み込み失敗：'+e.message);}};rd.readAsText(file);}
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;
  if(b.dataset.auto==='stop'){finishAutoRun('手動停止');return;}
@@ -1115,7 +1220,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&autoSession?.running)finishAutoRun('画面が非表示になったため停止');});
 window.addEventListener('pagehide',()=>{if(autoSession?.running)finishAutoRun('画面を閉じたため停止');});
 document.addEventListener('change',e=>{if(e.target.id==='gearFilter'){gearFilter=e.target.value;render();}if(e.target.id==='importFile'){importSave(e.target.files?.[0]);e.target.value='';}});
-window.ABYSS_DEBUG={autoRun:()=>autoSession?{...autoSnapshot(autoSession)}:null,lastAutoRun:()=>structuredClone(state.lastAutoRun||null),stopAutoRun:()=>finishAutoRun('手動停止'),startAutoRun,jobKeys:()=>[...jobKeys],jobMaster:j=>isJobMaster(j),masterPassives:()=>structuredClone(masterPassiveDefinitions),jobActions:()=>jobActionsPerTurn(derived().agi),power:itemId=>{const item=state.inventory.find(i=>i.id===itemId);return item?{...powerValues(item)}:null;},masteryProcRate:()=>masteryProcRate(),state:()=>structuredClone(state),magicCatalog:()=>structuredClone(MAGIC_CATALOG),buyMagic,restoreMagic,infuseMagic,extractMagic,equipMagic,magicProcRate:(key,mult,luk)=>magicProcRate({key},{multiplier:mult},luk),rollMagicTurn:()=>rollMagicTurn(false,derived().luk),mastery:itemId=>{const i=state.inventory.find(x=>x.id===itemId);return i?structuredClone(normalizeMastery(i)):null;},masteryTech:(itemId)=>masteryTechnique(state.inventory.find(x=>x.id===itemId)),gainMastery:()=>{const x=grantBattleMastery();save();render();return x;},stats:()=>derived(),bossRules:()=>({berserkHpRate:BOSS_BERSERK_HP_RATE,berserkAttackMultiplier:BOSS_BERSERK_DAMAGE_MULTIPLIER,paralysisRate:FINAL_BOSS_PARALYSIS_RATE,desperateRate:FINAL_BOSS_DESPERATE_RATE,desperateAccuracy:FINAL_BOSS_DESPERATE_ACCURACY,desperateDamageMultiplier:FINAL_BOSS_DESPERATE_DAMAGE_MULTIPLIER}),jobMasters:()=>Object.fromEntries(jobKeys.map(j=>[j,isJobMaster(j)])),activeMasterPassive:()=>activeMasterPassive(),jobRequirements:()=>structuredClone(jobRequirements),wallGift:()=>structuredClone(WALL_DEV_GIFT),shop:()=>structuredClone(shopCatalog),skills:j=>structuredClone(skills[j||state.activeJob]),reset:()=>{state=createState();save();render();},gainExp:n=>{const r=gainExperience(n);save();render();return r;},setState:s=>{if(!valid(upgradeState(s)))throw Error('invalid state');state=structuredClone(s);save();render();},casino:()=>structuredClone(state.casino),forest:()=>structuredClone(state.forest),forestRecords:()=>structuredClone(state.forest.battleRecords||[]),forestBosses:()=>structuredClone(FOREST_BOSSES),forestDrops:()=>structuredClone(FOREST_BOSS_DROP_TABLES),itemDefinitions:()=>structuredClone(ITEM_CATALOG),goForestFloor:n=>setForestFloor(n),fightForest:n=>run(n,isForestBossFloor(state.forest.floor),'forest'),grow:()=>structuredClone(levelGrowth),pokerResult:cards=>pokerResult(cards),rouletteWin:(c,n,p)=>rouletteWin(c,n,p),fight:n=>run(n),rollSkill:()=>rollSkill(),actions:()=>actionsPerTurn(derived().agi)};
+window.ABYSS_DEBUG={autoRun:()=>autoSession?{...autoSnapshot(autoSession)}:null,lastAutoRun:()=>structuredClone(state.lastAutoRun||null),stopAutoRun:()=>finishAutoRun('手動停止'),startAutoRun,jobKeys:()=>[...jobKeys],jobMaster:j=>isJobMaster(j),masterPassives:()=>structuredClone(masterPassiveDefinitions),jobGroups:()=>({basic:[...basicJobKeys],advanced:[...advancedJobKeys]}),canChangeJob:j=>canChangeJob(j),changeJob:j=>changeJob(j),jobActions:()=>jobActionsPerTurn(derived().agi),power:itemId=>{const item=state.inventory.find(i=>i.id===itemId);return item?{...powerValues(item)}:null;},masteryProcRate:()=>masteryProcRate(),state:()=>structuredClone(state),magicCatalog:()=>structuredClone(MAGIC_CATALOG),buyMagic,restoreMagic,infuseMagic,extractMagic,equipMagic,magicProcRate:(key,mult,luk)=>magicProcRate({key},{multiplier:mult},luk),rollMagicTurn:()=>rollMagicTurn(false,derived().luk),mastery:itemId=>{const i=state.inventory.find(x=>x.id===itemId);return i?structuredClone(normalizeMastery(i)):null;},masteryTech:(itemId)=>masteryTechnique(state.inventory.find(x=>x.id===itemId)),gainMastery:()=>{const x=grantBattleMastery();save();render();return x;},stats:()=>derived(),bossRules:()=>({berserkHpRate:BOSS_BERSERK_HP_RATE,berserkAttackMultiplier:BOSS_BERSERK_DAMAGE_MULTIPLIER,paralysisRate:FINAL_BOSS_PARALYSIS_RATE,desperateRate:FINAL_BOSS_DESPERATE_RATE,desperateAccuracy:FINAL_BOSS_DESPERATE_ACCURACY,desperateDamageMultiplier:FINAL_BOSS_DESPERATE_DAMAGE_MULTIPLIER}),jobMasters:()=>Object.fromEntries(jobKeys.map(j=>[j,isJobMaster(j)])),activeMasterPassive:()=>activeMasterPassive(),jobRequirements:()=>structuredClone(jobRequirements),wallGift:()=>structuredClone(WALL_DEV_GIFT),shop:()=>structuredClone(shopCatalog),skills:j=>structuredClone(skills[j||state.activeJob]),reset:()=>{state=createState();save();render();},gainExp:n=>{const r=gainExperience(n);save();render();return r;},setState:s=>{if(!valid(upgradeState(s)))throw Error('invalid state');state=structuredClone(s);save();render();},casino:()=>structuredClone(state.casino),forest:()=>structuredClone(state.forest),forestRecords:()=>structuredClone(state.forest.battleRecords||[]),forestBosses:()=>structuredClone(FOREST_BOSSES),forestDrops:()=>structuredClone(FOREST_BOSS_DROP_TABLES),itemDefinitions:()=>structuredClone(ITEM_CATALOG),goForestFloor:n=>setForestFloor(n),fightForest:n=>run(n,isForestBossFloor(state.forest.floor),'forest'),grow:()=>structuredClone(levelGrowth),pokerResult:cards=>pokerResult(cards),rouletteWin:(c,n,p)=>rouletteWin(c,n,p),fight:n=>run(n),rollSkill:()=>rollSkill(),actions:()=>actionsPerTurn(derived().agi)};
 save();render();
 })();
 </script>
