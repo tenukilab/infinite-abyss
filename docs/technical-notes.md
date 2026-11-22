@@ -1,4 +1,4 @@
-# 技術設計・セーブ・検証（v0.22）
+# 技術設計・セーブ・検証（v0.23）
 
 > この文書は開発者／Codex向け。ソースの真実はルート `index.html`。変更時に差分を確認して更新する。
 
@@ -132,3 +132,14 @@ UI専用の `uiSection`、`buildTab`、`moreTab`、各折りたたみ状態は**
 - 図鑑の旧19件のIDは維持し、その後に新200件の `main:foe:名前` を追加。現在の収録数は**通常迷宮219・魔の森11・異世界26＝256件**。セーブ済みの戦績を創作・二重加算しない。
 - 通常迷宮のUIに `mainFloorBand`、図鑑に `codexMainBand` を追加（各10層の表示のみ。**UI一時状態はセーブしない**）。最大50層を一度に表示しない。
 - 回帰テスト：200件の名前/ID重複なし、各層4〜5種、図鑑256種、最高層の敵が異世界の通常ボス下限を下回ること、旧ボス討伐済みデータの第6層解放、50層の勝利と図鑑記録、iPhone幅、5戦自動周回。
+
+## v0.23 職業体系拡張・旧セーブ互換
+
+- **31職**：`basicJobKeys` 6、`intermediateJobKeys` 7（旧 `advancedJobKeys`、内部ID不変）、`compositeJobKeys` 9、`specialJobKeys` 1、`upperJobKeys` 8。
+- ジョブLv上限は引き続き60。総合Lv上限を**100,000**へ変更。上級はLv100,000＋上級以外の23職MASTER。グランドマスターはそのうち自分を除く22職MASTER。勇者は指定の複合5職MASTER。
+- `jobRequirements` で指定されたIDと `minLevel` を確認。`canChangeJob()` は両条件をAND判定。MASTER条件の循環を起こさない。
+- `upgradeState()` で新規18職の `jobProgress` と `loadouts` だけ初期追加。既存の職業EXP・装備・6能力値・図鑑・ダンジョンを保持。保存キー `infinite-abyss-save-v5` と `VERSION=5` は変更なし。
+- 複合9職＋グランドマスターは**各5個の仮スキル**、上級8職はスキル0件（将来決定）。上級の固有効果は戦闘で有効。`masteryProcRate(slot)` は武器と胴で1.3倍を分ける。
+- ガーディアンとダークナイトのHP倍率は `derived().maxHP` に反映。転職時の6能力値と装備は維持。倍率職から戻る際、現在HPが通常最大HPを超えていた場合のみ上限へ切り詰める。
+- 将来の精製成功率2倍は `FUTURE_CRAFT_RATE_MULTIPLIER` に定義だけ置き、未実装の精製に対し成功判定を偽装しない。
+- Node構文・Chromium iPhone幅・31職ID・115スキル・上級解放23職MASTER・旧セーブ移行・新上級8職の戦闘を検証。詳細は[ジョブ台帳](jobs-and-skills.md)、[ジョブツリー](job-tree.md)。
