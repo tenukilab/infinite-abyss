@@ -77,10 +77,13 @@
 .job-group-details{margin-top:16px}.job-group-details>summary{cursor:pointer;font-size:16px;font-weight:800;color:#dfc38f;padding:12px;border:1px solid #4d5465;background:#1b2635;border-radius:10px}
 .job-group-details>.jobcards{margin-top:11px}
 @media(max-width:600px){.nav{gap:5px}.nav button{font-size:12px;padding:11px 2px;min-height:45px}.dungeon-hub{grid-template-columns:1fr}.dungeon-tile{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:5px 10px}.dungeon-tile p{grid-column:1}.dungeon-tile .btn{grid-column:2;grid-row:1/span 2;min-width:95px}.hero{padding:13px}.hero h2{font-size:17px}.hero-hp{flex-basis:43%;min-width:110px}.hero-hp strong{font-size:12px}}
+/* v0.22: multi-band dungeon navigation supports 50 normal floors without horizontal overflow. */
+.main-bands .btn{white-space:nowrap;min-width:0}.main-grid .floorbtn small{max-height:26px;overflow:hidden;line-height:1.3}
+@media(max-width:375px){.main-bands .btn{font-size:9px;padding:8px 1px}.main-grid .floorbtn{padding:9px 3px}.main-grid .floorbtn b{font-size:12px}}
 </style>
 </head>
 <body>
-<main class="shell"><header class="mast"><div><div class="eyebrow">INFINITE ABYSS // PROTOTYPE 0.21</div><h1 class="brand">無限迷宮アビス</h1><div class="subtitle">強くなる理由など、強くなってから考えればいい。</div></div><div class="counter"><span class="chip" id="locationBadge">第1層</span><span class="coin" id="goldBadge">100 G</span></div></header><section class="hero" id="hero"></section><nav class="nav" aria-label="メインメニュー"><button data-section="adventure" class="active">⚔ 冒険</button><button data-section="build">◇ 育成</button><button data-section="codex">📖 図鑑</button><button data-section="more">☰ その他</button></nav><div id="view" class="page" aria-live="polite"></div><footer class="foot">INSPIRED BY CLASSIC BROWSER RPGS · OFFLINE SINGLE-FILE GAME</footer></main><div class="toast" id="toast" role="status" aria-live="polite"></div><input id="importFile" type="file" accept="application/json,.json" hidden>
+<main class="shell"><header class="mast"><div><div class="eyebrow">INFINITE ABYSS // PROTOTYPE 0.22</div><h1 class="brand">無限迷宮アビス</h1><div class="subtitle">強くなる理由など、強くなってから考えればいい。</div></div><div class="counter"><span class="chip" id="locationBadge">第1層</span><span class="coin" id="goldBadge">100 G</span></div></header><section class="hero" id="hero"></section><nav class="nav" aria-label="メインメニュー"><button data-section="adventure" class="active">⚔ 冒険</button><button data-section="build">◇ 育成</button><button data-section="codex">📖 図鑑</button><button data-section="more">☰ その他</button></nav><div id="view" class="page" aria-live="polite"></div><footer class="foot">INSPIRED BY CLASSIC BROWSER RPGS · OFFLINE SINGLE-FILE GAME</footer></main><div class="toast" id="toast" role="status" aria-live="polite"></div><input id="importFile" type="file" accept="application/json,.json" hidden>
 <script>
 'use strict';
 (()=>{
@@ -399,12 +402,61 @@ const floors={
  5:{name:'朽ちた王座',desc:'腐敗した騎士が眠る最深部。',need:5,foes:[['王座の死霊騎士',290,45,104,86],['墓王の番兵',260,42,96,79],['深淵の魔術師',230,48,110,91]]}
 };
 const boss=['腐敗した騎士',560,48,500,400];
+// v0.22: exactly 200 NEW ordinary monsters, 20 lineages × 10 themed phases.
+// The first five floors and the original Rotten Knight boss remain unchanged.
+const MAIN_MAX_FLOOR=50, MAIN_DEEP_START=6;
+const MAIN_FAMILIES=[
+ ['ゴブリン',.88,1.08],['コボルト',.90,1.12],['魔狼',.94,1.06],['岩スライム',1.16,.92],
+ ['骸骨兵',1.02,1.02],['夜コウモリ',.82,1.16],['樹人',1.26,.93],['魔蛛',.92,1.09],
+ ['地竜',1.28,1.07],['魔茸',.96,1.00],['甲虫',1.18,.93],['屍鬼',.97,1.12],
+ ['蜥蜴兵',1.07,1.05],['魔導人形',1.12,1.03],['大蛇',1.05,1.06],['精霊',.88,1.09],
+ ['羽獅子',1.08,1.04],['トロル',1.32,.99],['騎兵',1.08,1.08],['異形獣',1.22,1.11]
+];
+const MAIN_PHASES=[
+ ['淡霧の','薄霧の岩洞','冷たい霧が漂い、低位の魔物が群れる洞窟。'],
+ ['錆鉄の','廃鉄の回廊','捨てられた武具と兵士の残滓が眠る通路。'],
+ ['青燐の','亡光の墓道','青白い火がゆらぐ古代の墓道。'],
+ ['深紅の','血紅の地下水路','赤く染まった水脈に獣の気配が満ちる。'],
+ ['雷紋の','雷鳴の断層','電光が断層に走り、空気が震える。'],
+ ['氷牙の','凍てつく石宮','氷霜に閉じられた旧文明の石宮。'],
+ ['腐蝕の','腐蝕の深穴','瘴気が鎧を蝕み、魔物の姿を歪める。'],
+ ['黒曜の','黒曜の地下城','黒い石柱が並ぶ深層の居城。'],
+ ['星影の','星影の回廊','星屑の幻光が古い封印を浮かび上がらせる。'],
+ ['虚空の','虚空の最深域','空間の裂け目がひそむ通常迷宮の深奥。']
+];
+const MAIN_DEEP_MONSTERS=MAIN_PHASES.flatMap(([prefix,area,desc],phase)=>
+ MAIN_FAMILIES.map(([family,hpFactor,atkFactor],index)=>({
+  id:'main:foe:'+prefix+family,name:prefix+family,phase,family,area,desc,
+  hpFactor,atkFactor,variant:index
+ }))
+);
+// Every floor 6..50 gets 4 species; even floors 6..44 get one more: 180+20=200.
+// Numerical ceilings at floor 50 stay below the weakest ordinary Otherworld boss.
+let deepCursor=0;
+for(let f=MAIN_DEEP_START;f<=MAIN_MAX_FLOOR;f++){
+ const count=4+(f%2===0&&f<=44?1:0),depth=(f-MAIN_DEEP_START)/(MAIN_MAX_FLOOR-MAIN_DEEP_START);
+ const pool=MAIN_DEEP_MONSTERS.slice(deepCursor,deepCursor+count);
+ const phase=MAIN_PHASES[pool[0].phase];
+ const foes=pool.map((m,j)=>{
+  const hp=Math.round(380*Math.pow(14000,depth)*m.hpFactor);
+  const atk=Math.round(110*Math.pow(32,depth)*m.atkFactor);
+  const exp=Math.round(145*Math.pow(960,depth)*(0.90+m.variant*.01));
+  const gold=Math.round(100*Math.pow(340,depth)*(0.92+m.variant*.008));
+  m.floor=f;m.hp=hp;m.atk=atk;m.exp=exp;m.gold=gold;
+  return [m.name,hp,atk,exp,gold];
+ });
+ floors[f]={name:phase[1],desc:phase[2],need:3,foes};
+ deepCursor+=count;
+}
+if(deepCursor!==200||MAIN_DEEP_MONSTERS.length!==200||new Set(MAIN_DEEP_MONSTERS.map(m=>m.id)).size!==200)throw Error('通常迷宮200種の定義数が不一致');
+
 
 // Permanent encyclopedia. Never change existing IDs once saved by a player.
 const CODEX_SCHEMA=1;
 const CODEX_MONSTERS=[
- ...Object.values(floors).flatMap(f=>f.foes.map(raw=>({id:'main:foe:'+raw[0],group:'main',name:raw[0],kind:'normal',hp:raw[1],exp:raw[3],gold:raw[4]}))),
- {id:'main:boss',group:'main',name:boss[0],kind:'boss',hp:boss[1],exp:boss[3],gold:boss[4]},
+ ...Array.from({length:5},(_,i)=>floors[i+1]).flatMap((f,i)=>f.foes.map(raw=>({id:'main:foe:'+raw[0],group:'main',name:raw[0],kind:'normal',floor:i+1,hp:raw[1],exp:raw[3],gold:raw[4]}))),
+ {id:'main:boss',group:'main',name:boss[0],kind:'boss',floor:5,hp:boss[1],exp:boss[3],gold:boss[4]},
+ ...MAIN_DEEP_MONSTERS.map(m=>({id:m.id,group:'main',name:m.name,kind:'normal',floor:m.floor,hp:m.hp,exp:m.exp,gold:m.gold})),
  ...FOREST_FOE_NAMES.map(name=>({id:'forest:foe:'+name,group:'forest',name,kind:'normal',hp:null,exp:null,gold:null})),
  ...Object.entries(FOREST_BOSSES).map(([floor,e])=>({id:'forest:boss:'+floor,group:'forest',name:e.name,kind:'boss',hp:e.hp,exp:e.exp,gold:e.gold,floor:+floor})),
  ...ISEKAI_BOSSES.map(e=>({id:'isekai:'+e.id,group:'isekai',name:e.name,kind:'boss',hp:e.hp,exp:e.exp,gold:e.gold,style:e.style,specials:e.specials,passiveCat:!!e.passiveCat}))
@@ -583,7 +635,7 @@ function grantBattleMastery(){const gains=[];
 }
 const expNeed=l=>{const v=[0,25,40,60,85,115,145,175,220,265];return v[l]??(265+50*(l-9)+5*Math.max(0,l-9)*(l-10)/2);};
 function createState(){return {version:VERSION,activeJob:'mage',level:1,xp:0,hpGrowth:0,hp:78,gold:100,medals:0,baseStats:Object.fromEntries(attrs.map((key,i)=>[key,jobs.mage.base[i]])),casino:makeCasino(),location:'main',ore:0,floor:1,unlocked:1,
- kills:{1:0,2:0,3:0,4:0,5:0},wins:0,deaths:0,battleCount:0,bossDefeated:false,
+ kills:Object.fromEntries(Array.from({length:MAIN_MAX_FLOOR},(_,i)=>[i+1,0])),wins:0,deaths:0,battleCount:0,bossDefeated:false,
  rng:0xAB155005,nextId:1,masterySchema:MASTERY_SCHEMA,equipmentPowerSchema:EQUIPMENT_POWER_SCHEMA,magicSchema:MAGIC_SCHEMA,wallGiftSchema:WALL_GIFT_SCHEMA,magics:[],equippedMagic:null,jobProgress:freshJobs(),loadouts:Object.fromEntries(jobKeys.map(j=>[j,blankSlots()])),inventory:[],equipped:blankSlots(),
  forest:makeForest(),isekai:makeIsekai(),codex:newCodex(),history:[{id:0,headline:'新しい冒険',body:'6能力値・職業育成・カジノ島・装備熟練・魔法へようこそ。',at:'冒険開始'}]};}
 function makeCasino(){return {poker:null,last:'',plays:0,purchased:[],materials:[]};}
@@ -630,6 +682,12 @@ function upgradeState(s){if(!s||s.version!==VERSION||!jobs[s.activeJob])return s
  s.autoRunProgress=null;
  if(!s.baseStats)s.baseStats=jobAttributes(s.activeJob,s.level); // retain v0.5's current stat progression
  normalizeForest(s);normalizeIsekai(s);normalizeCodex(s);
+ // v0.22: expand the normal dungeon without touching historical kills or job/equipment saves.
+ if(!s.kills||typeof s.kills!=='object'||Array.isArray(s.kills))s.kills={};
+ for(let f=1;f<=MAIN_MAX_FLOOR;f++)if(!Number.isInteger(s.kills[f])||s.kills[f]<0)s.kills[f]=0;
+ s.unlocked=clamp(Number.isInteger(s.unlocked)?s.unlocked:1,1,MAIN_MAX_FLOOR);
+ if(s.bossDefeated)s.unlocked=Math.max(6,s.unlocked);
+ s.floor=clamp(Number.isInteger(s.floor)?s.floor:1,1,s.unlocked);
  // v0.16: append new upper jobs to old saves; preserve all earned stats, mastery, and inventory.
  if(!s.jobProgress||typeof s.jobProgress!=='object')s.jobProgress={};
  if(!s.loadouts||typeof s.loadouts!=='object')s.loadouts={};
@@ -706,7 +764,7 @@ function readState(){
  return createState();
 }
 let state=readState();let tab=state.location==='casino'?'casino':state.location==='forest'?'forest':state.location==='isekai'?'isekai':'explore',townSection='weapon',lastResult=null,gearFilter='all',autoSession=null,codexMode='monsters',codexGroup='isekai',codexFilter='all';
-let uiSection=state.location==='casino'?'more':'adventure',buildTab='gear',moreTab=state.location==='casino'?'casino':'town',gearInventoryOpen=false,advancedJobsOpen=false;
+let uiSection=state.location==='casino'?'more':'adventure',buildTab='gear',moreTab=state.location==='casino'?'casino':'town',gearInventoryOpen=false,advancedJobsOpen=false,mainFloorBand=Math.floor((state.floor-1)/10),codexMainBand=0;
 function save(){try{for(const j of jobKeys)state.loadouts[j]={...state.equipped};localStorage.setItem(KEY,JSON.stringify(state));}catch(e){console.warn('save failed',e);toast('保存に失敗。記録からJSONを出力してください。');}}
 function rand(){let x=state.rng>>>0||0x12345678;x^=x<<13;x^=x>>>17;x^=x<<5;state.rng=x>>>0;return state.rng/4294967296;}
 function ri(a,b){return a+Math.floor(rand()*(b-a+1));}
@@ -1059,8 +1117,8 @@ function fightOne(f,isBoss=false,dungeon='main',selectedFoe=null){const foe=dung
  let ore=0;
  if(dungeon==='main'&&f>=3&&rand()<clamp(.25+derived().luk*.002,0,.85)){ore=ri(1,Math.max(1,f-2));state.ore+=ore;}
  if(dungeon==='main'){
-  if(!isBoss&&f<5&&state.kills[f]>=floors[f].need&&state.unlocked===f)state.unlocked=f+1;
-  if(isBoss)state.bossDefeated=true;
+  if(!isBoss&&f<MAIN_MAX_FLOOR&&f!==5&&state.kills[f]>=floors[f].need&&state.unlocked===f)state.unlocked=f+1;
+  if(isBoss){state.bossDefeated=true;if(f===5)state.unlocked=Math.max(state.unlocked,6);}
  }
  const magicDrop=dungeon==='isekai'?rollIsekaiMagicDrop():null;
  markCodexBattle(foe,dungeon,isBoss,'win',magicDrop);
@@ -1247,7 +1305,7 @@ function forge(id){const item=state.inventory.find(i=>i.id===id);if(!item||item.
  state.hp=clamp(state.hp+Math.max(0,derived().maxHP-before),1,derived().maxHP);
  logEntry('強化：'+item.name,'+'+(n+1)+'へ強化 / '+cost+'G');save();render();toast('強化成功 +'+(n+1));
 }
-function setFloor(n){if(n>state.unlocked){toast('まだ開放されていません');return;}state.floor=n;lastResult=null;save();render();}
+function setFloor(n){if(!Number.isInteger(n)||n<1||n>MAIN_MAX_FLOOR||n>state.unlocked){toast('まだ開放されていません');return;}state.floor=n;mainFloorBand=Math.floor((n-1)/10);lastResult=null;save();render();}
 function setForestFloor(n){
  if(state.location!=='forest'||!Number.isInteger(n)||n<1||n>state.forest.unlocked)return;
  state.forest.floor=n;lastResult=null;save();render();
@@ -1331,18 +1389,25 @@ function resultHTML(){if(!lastResult)return '';
  [r.results.filter(x=>x.win).length+'/'+r.results.length,'勝利 / 戦闘'],['+'+num(r.exp),'EXP'],['+'+num(r.gold)+' G','獲得G'],[r.surges,'魔力暴走'],[r.misses,'攻撃ミス'],[r.dodges,'回避成功']
  ].map(([v,k])=>`<div class="metric"><b>${v}</b><small>${k}</small></div>`).join('')}</div><hr class="divider"><div class="small">総合LvUP +${r.levelUps} / ジョブLvUP +${r.jobUps} / 鉱石 +${r.ore} / ${r.dungeon==='forest'?'素材・魔法ドロップなし（空テーブル）':r.dungeon==='isekai'?'魔法ドロップ率1%':'装備ドロップなし'}</div><div class="small" style="margin-top:8px">${r.masteryTotals.length?r.masteryTotals.map(x=>esc(x.name)+' 熟練EXP +'+x.exp+(x.levels?'（熟練+'+x.levels+'）':'')).join(' / '):'熟練EXP：獲得対象なし・上限到達'}</div><div class="small" style="margin-top:8px">魔法ドロップ：${r.dungeon==='isekai'?(r.results.map(x=>x.magicDrop?.name).filter(Boolean).map(esc).join(' / ')||'なし'):'対象外'}</div><div class="small" style="margin-top:8px">魔法：${Object.keys(r.magicTotals||{}).length?Object.entries(r.magicTotals).map(([n,c])=>esc(n)+'×'+c).join(' / '):'発動なし'}</div>${['forest','isekai'].includes(r.dungeon)?'<p class="hint">下の戦闘記録にある「記録」をタップすると、全ターンの処理を確認できます。</p>':`<details style="margin-top:12px"><summary class="small muted">戦闘の内訳</summary>${r.results.map((b,i)=>`<p class="small" style="line-height:1.75"><strong>#${state.battleCount-r.results.length+i+1} ${esc(b.name)}</strong> / ${b.win?'勝利':b.retreated?'撤退':'敗北'} / ${b.rounds}T / 被ダメ${b.damage}<span class="muted tiny" style="display:block">${esc(b.actions.join(' ／ '))}</span></p>`).join('')}</details>`}</section>`;
 }
-function exploreHTML(){const f=state.floor,v=floors[f],done=state.kills[f],need=v.need,available=state.unlocked;
- return `<section class="panel"><div class="kicker">DUNGEON SELECT</div><h2 class="sectiontitle">迷宮を探索する</h2>
- <div class="floorselect">${[1,2,3,4,5].map(n=>`<button class="floorbtn ${n===f?'active':''} ${n>available?'locked':''}" data-floor="${n}" ${n>available?'disabled':''}><b>第${n}層</b><small>${n>available?'未解放':n===f?'探索中':floors[n].name}</small></button>`).join('')}</div>
- <h3 class="sectiontitle">第${f}層：${v.name}</h3><p class="intro">${v.desc}</p>
- <div class="info"><span class="pill gold">Gで装備を購入</span><span class="pill">装備ドロップなし</span><span class="pill blue">${f>=3?'鉱石あり':'鉱石なし'}</span></div>
- <div class="enemylist">${v.foes.map(x=>`<div class="enemy"><strong>${x[0]}</strong><small>HP ${x[1]} / EXP ${x[3]} / ${x[4]}G</small></div>`).join('')}</div>
- <div class="small muted">${f===5?'ボス出現':'次の階層解放'}：${Math.min(done,need)} / ${need} 勝</div><div class="progressline"><span style="width:${Math.min(done/need*100,100)}%"></span></div>
- <div class="controls"><label class="controlgroup small">撤退HP <input id="retreat" class="input" type="number" min="0" value="40"></label><span class="controlnote">各戦闘前後に判定。途中で敗北する場合あり。</span></div>
- <div class="buttonrow">${[1,5,10,20,30].map(n=>`<button class="btn ${n===10?'primary':''}" data-fight="${n}">${n}戦</button>`).join('')}<button class="btn gold" data-action="inn">宿屋 20G</button>${f===5?`<button class="btn gold" data-boss="1" ${done<need||state.bossDefeated?'disabled':''}>${state.bossDefeated?'ボス討伐済':'ボス戦'}</button>`:''}</div>
- <p class="hint">命中：器用さ＋運／回避：素早さ＋運／連続攻撃：素早さ20ごとに+1回（通常最大4回。シーフMASTERは5回）。スキルはジョブLvで解放、MP不要。魔力暴走は魔法使い・上級魔術師のパッシブ。</p> </section>
- ${autoRunPanelHTML('main')}${resultHTML()}<section class="panel"><h3 class="sectiontitle">最近の記録</h3>${state.history.slice(0,5).map(x=>`<div class="log"><strong>${esc(x.headline)}</strong><p>${esc(x.body)}</p></div>`).join('')}</section>`;
+function exploreHTML(){const f=state.floor,v=floors[f],done=state.kills[f]||0,need=v.need,available=state.unlocked;
+ const band=clamp(mainFloorBand,0,Math.ceil(MAIN_MAX_FLOOR/10)-1),start=band*10+1;
+ const visible=Array.from({length:10},(_,i)=>start+i).filter(n=>n<=MAIN_MAX_FLOOR);
+ const reachedFifth=f===5,clearedFifth=!!state.bossDefeated;
+ return `<section class="panel"><div class="kicker">DUNGEON SELECT · ${MAIN_MAX_FLOOR} FLOORS</div><h2 class="sectiontitle">迷宮を探索する</h2>
+  <p class="intro">第1〜5層は従来どおり。第5層「腐敗した騎士」討伐後、奥へ続く第6〜50層が解放される。深層には新たな通常モンスター200種が待つ。</p>
+  <div class="info"><span class="pill gold">第${f}層 / ${MAIN_MAX_FLOOR}</span><span class="pill">最高到達 第${available}層</span><span class="pill blue">新モンスター ${MAIN_DEEP_MONSTERS.length}種</span></div>
+  <div class="forest-bands main-bands">${Array.from({length:5},(_,i)=>`<button class="btn ${band===i?'primary':''}" data-mainband="${i}" ${available<i*10+1?'disabled':''}>${i*10+1}〜${Math.min(MAIN_MAX_FLOOR,(i+1)*10)}</button>`).join('')}</div>
+  <div class="forest-grid main-grid">${visible.map(n=>`<button class="floorbtn ${n===f?'active':''} ${n>available?'locked':''} ${n===5?'forest-boss':''}" data-floor="${n}" ${n>available?'disabled':''}><b>${n===5?'♛ ':''}${n}層</b><small>${n>available?'未解放':n===f?'探索中':n===5?'旧王座':floors[n].name}</small></button>`).join('')}</div>
+  <h3 class="sectiontitle">第${f}層：${esc(v.name)}</h3><p class="intro">${esc(v.desc)}</p>
+  <div class="info"><span class="pill gold">Gで装備を購入</span><span class="pill">装備ドロップなし</span><span class="pill blue">${f>=3?'鉱石あり':'鉱石なし'}</span></div>
+  <div class="enemylist">${v.foes.map(x=>`<div class="enemy"><strong>${esc(x[0])}</strong><small>HP ${num(x[1])} / EXP ${num(x[3])} / ${num(x[4])}G</small></div>`).join('')}</div>
+  <div class="small muted">${reachedFifth&&!clearedFifth?'腐敗した騎士の出現':f===MAIN_MAX_FLOOR?'最深層の踏破':'次の階層解放'}：${Math.min(done,need)} / ${need} 勝${reachedFifth&&clearedFifth?' ／ ボス討伐済み':''}</div><div class="progressline"><span style="width:${Math.min(done/need*100,100)}%"></span></div>
+  <div class="controls"><label class="controlgroup small">撤退HP <input id="retreat" class="input" type="number" min="0" value="40"></label><span class="controlnote">各戦闘前後に判定。途中で敗北する場合あり。</span></div>
+  <div class="buttonrow">${[1,5,10,20,30].map(n=>`<button class="btn ${n===10?'primary':''}" data-fight="${n}">${n}戦</button>`).join('')}<button class="btn gold" data-action="inn">宿屋 20G</button>${reachedFifth?`<button class="btn gold" data-boss="1" ${done<need||clearedFifth?'disabled':''}>${clearedFifth?'ボス討伐済':'ボス戦'}</button>`:''}${f<MAIN_MAX_FLOOR&&available>f?`<button class="btn primary" data-floor="${f+1}">次の${f+1}層へ</button>`:''}</div>
+  <p class="hint">全50層。6〜50層の200種は通常敵として抽選し、HP・攻撃力・EXP・Gを階層ごとに少しずつ上昇。異世界のボス級より弱い設定。全戦闘150ターン制限。</p></section>
+  ${autoRunPanelHTML('main')}${resultHTML()}<section class="panel"><h3 class="sectiontitle">最近の記録</h3>${state.history.slice(0,5).map(x=>`<div class="log"><strong>${esc(x.headline)}</strong><p>${esc(x.body)}</p></div>`).join('')}</section>`;
 }
+
 function gearHTML(){const d=derived(),readonly=state.location!=='main';const equipped=slots.map(s=>{const i=state.inventory.find(i=>i.id===state.equipped[s]);return `<div class="gear"><div class="slot">${slotName[s]}</div><div class="name">${esc(i?.name||'未装備')}</div><div class="affix">${i?statLine(i.stat)+' / '+powerText(i)+(i.enhance?' / 強化+'+i.enhance:'')+(isMasteryItem(i)?'<div class="masteryline">'+esc(masteryText(i))+'</div>':''):'補正なし'}</div></div>`;}).join('');
  const items=state.inventory.filter(i=>(gearFilter==='all'||i.slot===gearFilter)).map(i=>{const wearing=state.equipped[i.slot]===i.id;return `<div class="item ${wearing?'equipped':''}"><div><div class="meta">${slotName[i.slot]}</div><h3>${esc(i.name)}${i.enhance?' +'+i.enhance:''}</h3><div class="spec">${statLine(i.stat)} / ${powerText(i)}${isMasteryItem(i)?'<div class="masteryline">'+esc(masteryText(i))+'</div>':''}</div></div><div class="itemactions">${wearing?'<span class="tag">装備中</span>':readonly?'<span class="pill">閲覧のみ</span>':`<button class="btn primary" data-equip="${i.id}">装備</button>${i.devGift||i.casinoSku?'':`<button class="btn ghost" data-sell="${i.id}">売却</button>`}`}</div></div>`;}).join('');
  return `<section class="panel"><div class="kicker">EQUIPMENT</div><h2 class="sectiontitle">装備構成</h2>${readonly?'<div class="notice ui-access-note">ダンジョン滞在中は装備の確認のみ可能。変更・売却は拠点で行ってください。</div>':''}<p class="intro">武器は熟練1につき基本攻撃+5、胴防具は基本防御+1。熟練技は50で解放・500で効果上限。オーラの結晶装備時は武器・胴の熟練技発動率が15%→45%になる。装備は原則ジョブ不問。</p><div class="geargrid">${equipped}</div><p class="hint">力 ${d.str} / 魔力 ${d.mag} / 生命力 ${d.vit} / 器用さ ${d.dex} / 素早さ ${d.agi} / 運 ${d.luk}<br>装備攻撃 ${num(d.baseAttack)} / 装備防御 ${num(d.baseDefense)} / 熟練技発動 ${masteryProcRate()}%</p></section>
@@ -1426,7 +1491,7 @@ function codexMonsterCard(e,i){
  const abilities=e.passiveCat?`命中率0.001%固定／ねこパンチ0.05%・必中即死／猫らしい行動`:e.group==='isekai'?e.specials.map(codexSpecialText).join(' / ')+(e.kind==='boss'?' / HP50%以下で暴走':''):e.kind==='boss'?e.group==='forest'&&e.floor===50?'HP半分で暴走／麻痺20%／原初の壊撃20%':'HP半分で暴走（攻撃×1.5）':'固有特殊能力なし';
  const dropNames=Object.entries(rec.drops||{}).filter(([,n])=>n>0).map(([k,n])=>(magicDef(k)?.name||k)+'×'+n).join('、');
  const hp=e.hp==null?'階層により変動':num(e.hp);
- return `<div class="codex-card found"><div class="codex-topline">NO.${String(i+1).padStart(2,'0')} · ${CODEX_DUNGEON_NAMES[e.group]} · ${e.kind==='boss'?'BOSS':'MONSTER'}</div><h3>${esc(e.name)}</h3>
+ return `<div class="codex-card found"><div class="codex-topline">NO.${String(i+1).padStart(2,'0')} · ${CODEX_DUNGEON_NAMES[e.group]}${e.group==='main'?' · 第'+e.floor+'層':''} · ${e.kind==='boss'?'BOSS':'MONSTER'}</div><h3>${esc(e.name)}</h3>
  <div class="codex-stats"><div><strong>${num(rec.sightings)}</strong>遭遇</div><div><strong>${num(rec.wins)}</strong>討伐</div><div><strong>${num(rec.losses)}</strong>敗北</div><div><strong>${num(rec.retreats)}</strong>撤退</div></div>
  <div class="spec">HP：${hp}${e.exp==null?'':` ／ EXP ${num(e.exp)} ／ G ${num(e.gold)}`}<div class="tiny muted">最終戦闘記録 #${rec.lastBattle==null?'—':num(rec.lastBattle)}${rec.battles?' ／ 戦闘 '+num(rec.battles)+'回':''}</div></div>
  <div class="codex-abilities"><strong>特殊能力</strong><div>${esc(abilities)}</div>${dropNames?`<div>獲得魔法：${esc(dropNames)}</div>`:''}</div></div>`;
@@ -1442,7 +1507,7 @@ function codexMagicCard(def){
 function codexHTML(){
  const monsters=CODEX_MONSTERS,known=monsters.filter(e=>(state.codex.monsters[e.id]?.sightings||0)>0).length;
  const spells=MAGIC_CATALOG.filter(e=>e.kind==='spell'),knownSpells=spells.filter(e=>state.codex.magics[e.key]?.discovered).length;
- const monsterList=monsters.filter(e=>e.group===codexGroup).filter(e=>codexFilter==='all'||(codexFilter==='seen')===((state.codex.monsters[e.id]?.sightings||0)>0));
+ const monsterList=monsters.filter(e=>e.group===codexGroup&&(codexGroup!=='main'||(e.floor>=codexMainBand*10+1&&e.floor<=(codexMainBand+1)*10))).filter(e=>codexFilter==='all'||(codexFilter==='seen')===((state.codex.monsters[e.id]?.sightings||0)>0));
  const foundGroup=monsters.filter(e=>e.group===codexGroup&&(state.codex.monsters[e.id]?.sightings||0)>0).length;
  const groupTotal=monsters.filter(e=>e.group===codexGroup).length;
  return `<section class="panel"><div class="kicker">MONSTER & MAGIC CODEX</div><h2 class="sectiontitle">📖 冒険図鑑</h2>
@@ -1450,7 +1515,7 @@ function codexHTML(){
  <div class="info"><span class="pill gold">モンスター ${known} / ${monsters.length}種</span><span class="pill blue">魔法 ${knownSpells} / ${spells.length}種</span></div>
  <div class="codex-switch"><button class="btn ${codexMode==='monsters'?'primary':''}" data-codexmode="monsters">⚔ モンスター図鑑</button><button class="btn ${codexMode==='magics'?'primary':''}" data-codexmode="magics">✦ 魔法図鑑</button></div>
  ${codexMode==='monsters'?`<div class="codex-switch">${['main','forest','isekai'].map(g=>`<button class="btn ${codexGroup===g?'gold':''}" data-codexgroup="${g}">${CODEX_DUNGEON_NAMES[g]}</button>`).join('')}</div>
- <div class="split"><span class="small muted">${CODEX_DUNGEON_NAMES[codexGroup]}：発見 ${foundGroup} / ${groupTotal}種</span><label class="small muted">表示 <select id="codexFilter" class="input" style="width:auto"><option value="all" ${codexFilter==='all'?'selected':''}>すべて</option><option value="seen" ${codexFilter==='seen'?'selected':''}>遭遇済み</option><option value="unseen" ${codexFilter==='unseen'?'selected':''}>未遭遇</option></select></label></div>
+ ${codexGroup==='main'?`<div class="forest-bands main-bands codex-main-bands">${Array.from({length:5},(_,i)=>`<button class="btn ${codexMainBand===i?'primary':''}" data-codexmainband="${i}">${i*10+1}〜${(i+1)*10}</button>`).join('')}</div>`:''}<div class="split"><span class="small muted">${CODEX_DUNGEON_NAMES[codexGroup]}：発見 ${foundGroup} / ${groupTotal}種</span><label class="small muted">表示 <select id="codexFilter" class="input" style="width:auto"><option value="all" ${codexFilter==='all'?'selected':''}>すべて</option><option value="seen" ${codexFilter==='seen'?'selected':''}>遭遇済み</option><option value="unseen" ${codexFilter==='unseen'?'selected':''}>未遭遇</option></select></label></div>
  <div class="codex-grid">${monsterList.map((e,i)=>codexMonsterCard(e,monsters.indexOf(e))).join('')||'<div class="empty">この条件に一致する敵はいません。</div>'}</div>`:
  `<p class="hint">魔法のレアリティ重みは未実装。現時点の異世界ドロップ率は勝利ごとに1%、当選後は全6魔法から均等抽選。</p><div class="codex-grid">${spells.map(codexMagicCard).join('')}</div>`}
  <p class="hint" style="margin-top:17px">旧セーブの戦績は残っていた戦闘記録（魔の森・異世界の直近30戦、通常迷宮の保存ログ）から復元。過去の全戦闘を網羅するものではなく、図鑑導入後の新しい戦闘はすべて累積保存する。</p></section>`;
@@ -1622,7 +1687,7 @@ function adventureHubHTML(){
  if(state.location==='casino')return `<section class="panel ui-away"><h2 class="sectiontitle">冒険への帰還</h2><p class="intro">現在はカジノ島に滞在中。通常迷宮・魔の森・異世界へ向かうには、拠点へ戻ってください。</p><button class="btn primary" data-travel="main">⌂ 拠点へ戻る</button></section>`;
  if(state.location!=='main')return `<section class="panel ui-away"><div class="split"><div><div class="kicker">CURRENT DESTINATION</div><h3 class="sectiontitle">${state.location==='forest'?'🌲 魔の森':'✦ 異世界'}を探索中</h3></div><button class="btn ghost" data-travel="main">⌂ 拠点へ戻る</button></div><p class="small muted">育成・図鑑・記録は他のメニューで閲覧できます。ここへ戻っても探索状況は変わりません。</p></section>`;
  return `<section class="panel"><div class="kicker">ADVENTURE HUB</div><h2 class="sectiontitle">冒険先を選ぶ</h2><div class="dungeon-hub">
-  <div class="dungeon-tile current"><strong>⚔ 通常迷宮</strong><p>現在の探索先 · 第${state.floor}層 / 5</p><span class="pill good">探索中</span></div>
+  <div class="dungeon-tile current"><strong>⚔ 通常迷宮</strong><p>現在の探索先 · 第${state.floor}層 / ${MAIN_MAX_FLOOR}</p><span class="pill good">探索中</span></div>
   <div class="dungeon-tile"><strong>🌲 魔の森</strong><p>全50階 · 到達第${state.forest.unlocked}階</p><button class="btn" data-travel="forest">森へ向かう</button></div>
   <div class="dungeon-tile"><strong>✦ 異世界</strong><p>全26体のランダムボス</p><button class="btn" data-travel="isekai">異世界へ挑む</button></div>
  </div><p class="hint">ショップ・宿屋・カジノは「その他」→「拠点施設」から利用できます。</p></section>`;
@@ -1656,14 +1721,16 @@ function render(){
  }
  $('#view').innerHTML=content;
 }
-function exportSave(){const blob=new Blob([JSON.stringify({app:'INFINITE_ABYSS',exportedAt:new Date().toISOString(),state},null,2)],{type:'application/json'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='abyss-v021-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast('JSON書き出し完了');}
-function importSave(file){if(!file)return;const rd=new FileReader();rd.onload=()=>{try{const data=JSON.parse(rd.result),s=data.state||data;if(!valid(upgradeState(s)))throw Error('v0.5/0.6形式のみ対応');if(!confirm('現在のデータを上書きします。続けますか？'))return;state=s;lastResult=null;tab=state.location==='casino'?'casino':state.location==='forest'?'forest':state.location==='isekai'?'isekai':'explore';uiSection=state.location==='casino'?'more':'adventure';moreTab=state.location==='casino'?'casino':'town';buildTab='gear';save();render();toast('データを復元しました');}catch(e){toast('読み込み失敗：'+e.message);}};rd.readAsText(file);}
+function exportSave(){const blob=new Blob([JSON.stringify({app:'INFINITE_ABYSS',exportedAt:new Date().toISOString(),state},null,2)],{type:'application/json'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='abyss-v022-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast('JSON書き出し完了');}
+function importSave(file){if(!file)return;const rd=new FileReader();rd.onload=()=>{try{const data=JSON.parse(rd.result),s=data.state||data;if(!valid(upgradeState(s)))throw Error('v0.5/0.6形式のみ対応');if(!confirm('現在のデータを上書きします。続けますか？'))return;state=s;lastResult=null;tab=state.location==='casino'?'casino':state.location==='forest'?'forest':state.location==='isekai'?'isekai':'explore';uiSection=state.location==='casino'?'more':'adventure';moreTab=state.location==='casino'?'casino':'town';buildTab='gear';mainFloorBand=Math.floor((state.floor-1)/10);codexMainBand=0;save();render();toast('データを復元しました');}catch(e){toast('読み込み失敗：'+e.message);}};rd.readAsText(file);}
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;
  if(b.dataset.auto==='stop'){finishAutoRun('手動停止');return;}
  if(autoSession?.running){toast('自動周回中は停止してから操作してください');return;}
  if(b.dataset.auto==='start'){startAutoRun();return;}
  if(b.dataset.codexmode){codexMode=b.dataset.codexmode;render();return;}
  if(b.dataset.codexgroup){codexGroup=b.dataset.codexgroup;render();return;}
+ if(b.dataset.codexmainband!==undefined){const n=Number(b.dataset.codexmainband);if(Number.isInteger(n)&&n>=0&&n<5){codexMainBand=n;render();}return;}
+ if(b.dataset.mainband!==undefined){const n=Number(b.dataset.mainband);if(Number.isInteger(n)&&n>=0&&n<5&&state.unlocked>=n*10+1){mainFloorBand=n;render();}return;}
  if(b.dataset.section){uiSection=b.dataset.section;if(uiSection==='more'&&state.location==='casino')moreTab='casino';render();document.querySelector('.nav')?.scrollIntoView({block:'start'});return;}
  if(b.dataset.build){if(!['gear','jobs','magic'].includes(b.dataset.build))return;buildTab=b.dataset.build;render();return;}
  if(b.dataset.more){if(!['town','record','casino'].includes(b.dataset.more))return;moreTab=b.dataset.more;render();return;}
@@ -1696,13 +1763,13 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||
  if(b.dataset.magicrestore){restoreMagic(b.dataset.magicrestore);return;}
  if(b.dataset.magicinfuse){infuseMagic($('#magicVessel')?.value,$('#magicIngredient')?.value);return;}
  if(b.dataset.magicextract){const [v,s]=b.dataset.magicextract.split('|');extractMagic(v,s);return;}
- switch(b.dataset.action){case 'go-magic-shop':if(state.location==='main'){townSection='magic';moreTab='town';uiSection='more';render();}else toast('魔法店は拠点でのみ利用できます');break;case 'inn':inn();break;case 'export':exportSave();break;case 'import':$('#importFile').click();break;case 'reset':if(confirm('本当にセーブを全消去してLv.1から始めますか？')){state=createState();tab='explore';uiSection='adventure';buildTab='gear';moreTab='town';lastResult=null;save();render();toast('初期化しました');}break;}
+ switch(b.dataset.action){case 'go-magic-shop':if(state.location==='main'){townSection='magic';moreTab='town';uiSection='more';render();}else toast('魔法店は拠点でのみ利用できます');break;case 'inn':inn();break;case 'export':exportSave();break;case 'import':$('#importFile').click();break;case 'reset':if(confirm('本当にセーブを全消去してLv.1から始めますか？')){state=createState();tab='explore';uiSection='adventure';buildTab='gear';moreTab='town';mainFloorBand=0;codexMainBand=0;lastResult=null;save();render();toast('初期化しました');}break;}
 });
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&autoSession?.running)finishAutoRun('画面が非表示になったため停止');});
 window.addEventListener('pagehide',()=>{if(autoSession?.running)finishAutoRun('画面を閉じたため停止');});
 document.addEventListener('toggle',e=>{if(e.target.id==='gearInventory')gearInventoryOpen=e.target.open;if(e.target.id==='advancedJobs')advancedJobsOpen=e.target.open;},true);
 document.addEventListener('change',e=>{if(e.target.id==='gearFilter'){gearFilter=e.target.value;render();}if(e.target.id==='codexFilter'){codexFilter=e.target.value;render();}if(e.target.id==='importFile'){importSave(e.target.files?.[0]);e.target.value='';}});
-window.ABYSS_DEBUG={codex:()=>structuredClone(state.codex),codexMonsters:()=>structuredClone(CODEX_MONSTERS),codexMonsterId:(d,n,b,id)=>codexMonsterId(d,n,b,id),codexTab:()=>{uiSection='codex';tab='codex';render();},statusResistance:t=>effectResistance(t),statusItems:()=>structuredClone(STATUS_RESIST_ITEMS),pendingIsekaiBoss:()=>pendingIsekaiBoss()?.name||null,holdIsekaiBoss:()=>holdIsekaiBoss().name,autoStep:()=>runAutoStep(),battleTurnLimit:()=>BATTLE_TURN_LIMIT,peelunaSpawnRate:()=>PEELUNA_SPAWN_RATE,peelunaPunchRate:()=>PEELUNA_PUNCH_RATE,rollIsekaiBoss:()=>rollIsekaiBoss().name,peeluna:()=>structuredClone(PEELUNA_BOSS),isekaiBosses:()=>structuredClone(ISEKAI_BOSSES),isekai:()=>structuredClone(state.isekai),isekaiDropRate:()=>ISEKAI_MAGIC_DROP_RATE,isekaiDropPool:()=>ISEKAI_MAGIC_DROP_POOL().map(({key,name,dropRarity})=>({key,name,dropRarity})),fightIsekai:()=>run(1,true,'isekai'),autoRun:()=>autoSession?{...autoSnapshot(autoSession)}:null,lastAutoRun:()=>structuredClone(state.lastAutoRun||null),stopAutoRun:()=>finishAutoRun('手動停止'),startAutoRun,jobKeys:()=>[...jobKeys],jobMaster:j=>isJobMaster(j),masterPassives:()=>structuredClone(masterPassiveDefinitions),jobGroups:()=>({basic:[...basicJobKeys],advanced:[...advancedJobKeys]}),canChangeJob:j=>canChangeJob(j),changeJob:j=>changeJob(j),jobActions:()=>jobActionsPerTurn(derived().agi),power:itemId=>{const item=state.inventory.find(i=>i.id===itemId);return item?{...powerValues(item)}:null;},masteryProcRate:()=>masteryProcRate(),state:()=>structuredClone(state),magicCatalog:()=>structuredClone(MAGIC_CATALOG),buyMagic,restoreMagic,infuseMagic,extractMagic,equipMagic,magicProcRate:(key,mult,luk)=>magicProcRate({key},{multiplier:mult},luk),rollMagicTurn:()=>rollMagicTurn(false,derived().luk),mastery:itemId=>{const i=state.inventory.find(x=>x.id===itemId);return i?structuredClone(normalizeMastery(i)):null;},masteryTech:(itemId)=>masteryTechnique(state.inventory.find(x=>x.id===itemId)),gainMastery:()=>{const x=grantBattleMastery();save();render();return x;},stats:()=>derived(),bossRules:()=>({berserkHpRate:BOSS_BERSERK_HP_RATE,berserkAttackMultiplier:BOSS_BERSERK_DAMAGE_MULTIPLIER,paralysisRate:FINAL_BOSS_PARALYSIS_RATE,desperateRate:FINAL_BOSS_DESPERATE_RATE,desperateAccuracy:FINAL_BOSS_DESPERATE_ACCURACY,desperateDamageMultiplier:FINAL_BOSS_DESPERATE_DAMAGE_MULTIPLIER}),jobMasters:()=>Object.fromEntries(jobKeys.map(j=>[j,isJobMaster(j)])),activeMasterPassive:()=>activeMasterPassive(),jobRequirements:()=>structuredClone(jobRequirements),wallGift:()=>structuredClone(WALL_DEV_GIFT),shop:()=>structuredClone(shopCatalog),skills:j=>structuredClone(skills[j||state.activeJob]),reset:()=>{state=createState();save();render();},gainExp:n=>{const r=gainExperience(n);save();render();return r;},setState:s=>{if(!valid(upgradeState(s)))throw Error('invalid state');state=structuredClone(s);save();render();},casino:()=>structuredClone(state.casino),forest:()=>structuredClone(state.forest),forestRecords:()=>structuredClone(state.forest.battleRecords||[]),forestBosses:()=>structuredClone(FOREST_BOSSES),forestDrops:()=>structuredClone(FOREST_BOSS_DROP_TABLES),itemDefinitions:()=>structuredClone(ITEM_CATALOG),goForestFloor:n=>setForestFloor(n),fightForest:n=>run(n,isForestBossFloor(state.forest.floor),'forest'),grow:()=>structuredClone(levelGrowth),pokerResult:cards=>pokerResult(cards),rouletteWin:(c,n,p)=>rouletteWin(c,n,p),fight:n=>run(n),rollSkill:()=>rollSkill(),actions:()=>actionsPerTurn(derived().agi)};
+window.ABYSS_DEBUG={mainMaxFloor:()=>MAIN_MAX_FLOOR,mainDeepMonsters:()=>structuredClone(MAIN_DEEP_MONSTERS),mainFloors:()=>structuredClone(floors),goMainFloor:n=>setFloor(n),codex:()=>structuredClone(state.codex),codexMonsters:()=>structuredClone(CODEX_MONSTERS),codexMonsterId:(d,n,b,id)=>codexMonsterId(d,n,b,id),codexTab:()=>{uiSection='codex';tab='codex';render();},statusResistance:t=>effectResistance(t),statusItems:()=>structuredClone(STATUS_RESIST_ITEMS),pendingIsekaiBoss:()=>pendingIsekaiBoss()?.name||null,holdIsekaiBoss:()=>holdIsekaiBoss().name,autoStep:()=>runAutoStep(),battleTurnLimit:()=>BATTLE_TURN_LIMIT,peelunaSpawnRate:()=>PEELUNA_SPAWN_RATE,peelunaPunchRate:()=>PEELUNA_PUNCH_RATE,rollIsekaiBoss:()=>rollIsekaiBoss().name,peeluna:()=>structuredClone(PEELUNA_BOSS),isekaiBosses:()=>structuredClone(ISEKAI_BOSSES),isekai:()=>structuredClone(state.isekai),isekaiDropRate:()=>ISEKAI_MAGIC_DROP_RATE,isekaiDropPool:()=>ISEKAI_MAGIC_DROP_POOL().map(({key,name,dropRarity})=>({key,name,dropRarity})),fightIsekai:()=>run(1,true,'isekai'),autoRun:()=>autoSession?{...autoSnapshot(autoSession)}:null,lastAutoRun:()=>structuredClone(state.lastAutoRun||null),stopAutoRun:()=>finishAutoRun('手動停止'),startAutoRun,jobKeys:()=>[...jobKeys],jobMaster:j=>isJobMaster(j),masterPassives:()=>structuredClone(masterPassiveDefinitions),jobGroups:()=>({basic:[...basicJobKeys],advanced:[...advancedJobKeys]}),canChangeJob:j=>canChangeJob(j),changeJob:j=>changeJob(j),jobActions:()=>jobActionsPerTurn(derived().agi),power:itemId=>{const item=state.inventory.find(i=>i.id===itemId);return item?{...powerValues(item)}:null;},masteryProcRate:()=>masteryProcRate(),state:()=>structuredClone(state),magicCatalog:()=>structuredClone(MAGIC_CATALOG),buyMagic,restoreMagic,infuseMagic,extractMagic,equipMagic,magicProcRate:(key,mult,luk)=>magicProcRate({key},{multiplier:mult},luk),rollMagicTurn:()=>rollMagicTurn(false,derived().luk),mastery:itemId=>{const i=state.inventory.find(x=>x.id===itemId);return i?structuredClone(normalizeMastery(i)):null;},masteryTech:(itemId)=>masteryTechnique(state.inventory.find(x=>x.id===itemId)),gainMastery:()=>{const x=grantBattleMastery();save();render();return x;},stats:()=>derived(),bossRules:()=>({berserkHpRate:BOSS_BERSERK_HP_RATE,berserkAttackMultiplier:BOSS_BERSERK_DAMAGE_MULTIPLIER,paralysisRate:FINAL_BOSS_PARALYSIS_RATE,desperateRate:FINAL_BOSS_DESPERATE_RATE,desperateAccuracy:FINAL_BOSS_DESPERATE_ACCURACY,desperateDamageMultiplier:FINAL_BOSS_DESPERATE_DAMAGE_MULTIPLIER}),jobMasters:()=>Object.fromEntries(jobKeys.map(j=>[j,isJobMaster(j)])),activeMasterPassive:()=>activeMasterPassive(),jobRequirements:()=>structuredClone(jobRequirements),wallGift:()=>structuredClone(WALL_DEV_GIFT),shop:()=>structuredClone(shopCatalog),skills:j=>structuredClone(skills[j||state.activeJob]),reset:()=>{state=createState();save();render();},gainExp:n=>{const r=gainExperience(n);save();render();return r;},setState:s=>{if(!valid(upgradeState(s)))throw Error('invalid state');state=structuredClone(s);save();render();},casino:()=>structuredClone(state.casino),forest:()=>structuredClone(state.forest),forestRecords:()=>structuredClone(state.forest.battleRecords||[]),forestBosses:()=>structuredClone(FOREST_BOSSES),forestDrops:()=>structuredClone(FOREST_BOSS_DROP_TABLES),itemDefinitions:()=>structuredClone(ITEM_CATALOG),goForestFloor:n=>setForestFloor(n),fightForest:n=>run(n,isForestBossFloor(state.forest.floor),'forest'),grow:()=>structuredClone(levelGrowth),pokerResult:cards=>pokerResult(cards),rouletteWin:(c,n,p)=>rouletteWin(c,n,p),fight:n=>run(n),rollSkill:()=>rollSkill(),actions:()=>actionsPerTurn(derived().agi)};
 save();render();
 })();
 </script>
