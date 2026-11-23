@@ -1450,6 +1450,10 @@ function autoSnapshot(a){return {
  masteryExp:a.masteryExp,magicUsed:a.magicUsed,startedAt:a.startedAt,
  lastHP:currentHP(),maxHP:derived().maxHP
 };}
+function autoRunLocationText(dungeon,floor){
+ if(dungeon==='isekai')return '異世界（毎戦ランダムボス）';
+ return dungeon==='forest'?'魔の森 第'+floor+'階':'通常迷宮 第'+floor+'層';
+}
 function autoRunPanelHTML(dungeon){
  const running=autoSession?.running&&autoSession.dungeon===dungeon;
  const session=running?autoSession:null;
@@ -1457,7 +1461,7 @@ function autoRunPanelHTML(dungeon){
  const summary=last?.dungeon===dungeon?last:null;
  const f=dungeon==='isekai'?0:dungeon==='forest'?state.forest.floor:state.floor;
  const isBoss=dungeon==='isekai'?true:dungeon==='forest'?isForestBossFloor(f):f===5&&state.kills[5]>=floors[5].need&&!state.bossDefeated;
- const locationText=dungeon==='isekai'?'異世界（毎戦ランダムボス）':(dungeon==='forest'?'魔の森 第'+f+'階':'通常迷宮 第'+f+'層');
+ const locationText=autoRunLocationText(dungeon,f);
  const rareText=dungeon==='isekai'&&pendingIsekaiBoss()?.passiveCat?'現在「異世界に迷い込んだぴーるな」と遭遇中。手動で挑戦するか、「ぴーるな遭遇時停止」をOFFにして周回を開始できます。':'';
  return `<section class="panel auto-panel" id="auto-run-panel"><div class="kicker">AUTO EXPEDITION</div><h3 class="sectiontitle">⚙ 自動周回</h3>
  <p class="intro">${running?'周回中。職業・装備は固定し、戦闘を1回ずつ処理中。':'現在：'+locationText+'。階層移動・自動宿屋・自動転職はしない。'}</p>
@@ -1482,7 +1486,7 @@ function autoRunPanelHTML(dungeon){
   ${rareText?`<div class="notice" style="margin-top:10px">${esc(rareText)}</div>`:''}
   <p class="hint">${dungeon==='isekai'?'異世界は毎戦ボスを再抽選。通常25体と0.01%のぴーるな。勝利時の'+isekaiMagicDropDescription:isBoss?'この階ではボス戦を周回。通常迷宮のボスは再戦できないため、討伐後に停止。':'通常の敵と戦闘。'} 150ターン撤退・保存エラーで停止。iPhoneの画面を閉じている間は進みません。</p>
   <button class="btn primary" data-auto="start" style="width:100%">▶ 自動周回を開始</button>`}
- ${!running&&summary?`<hr class="divider"><strong class="small">前回の自動周回：${esc(summary.reason||'終了')}</strong><p class="small muted">${esc(locationText)} / ${num(summary.completed)} / ${num(summary.target)}戦 / EXP+${num(summary.exp)} / ${num(summary.gold)}G / 熟練EXP+${num(summary.masteryExp)}${dungeon==='isekai'?' / 魔法ドロップ '+num(summary.magicDrops||0)+'個':''}</p>${dungeon==='isekai'&&summary.magicFound&&Object.keys(summary.magicFound).length?`<p class="small muted">獲得魔法：${Object.entries(summary.magicFound).map(([name,n])=>esc(name)+' ×'+num(n)).join(' / ')}</p>`:''}`:''}
+ ${!running&&summary?`<hr class="divider"><strong class="small">前回の自動周回：${esc(summary.reason||'終了')}</strong><p class="small muted">${esc(autoRunLocationText(summary.dungeon,summary.floor))} / ${num(summary.completed)} / ${num(summary.target)}戦 / EXP+${num(summary.exp)} / ${num(summary.gold)}G / 熟練EXP+${num(summary.masteryExp)}${dungeon==='isekai'?' / 魔法ドロップ '+num(summary.magicDrops||0)+'個':''}</p>${dungeon==='isekai'&&summary.magicFound&&Object.keys(summary.magicFound).length?`<p class="small muted">獲得魔法：${Object.entries(summary.magicFound).map(([name,n])=>esc(name)+' ×'+num(n)).join(' / ')}</p>`:''}`:''}
  </section>`;
 }
 function refreshAutoPanel(){const a=autoSession;if(!a?.running)return;

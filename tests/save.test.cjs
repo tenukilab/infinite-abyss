@@ -1291,3 +1291,18 @@ test('auto-run rejects invalid goals and mastery goals with no growable gear', a
     assert.equal(game.state().autoRunProgress, null);
   });
 });
+
+test('the last auto-run summary shows where it happened after moving floors and reloading', () => {
+  const save = autoRunSave();
+  save.unlocked = 2;
+  const game = bootSaved(save);
+  configureAutoRun(game, 1);
+  game.click({ auto: 'start' });
+  game.stepAutoRun();
+  game.click({ floor: '2' });
+
+  const reopened = boot(game.storage);
+  const view = reopened.rendered('#view');
+  assert.match(view, /現在：通常迷宮 第2層/);
+  assert.match(view, /前回の自動周回：[^<]+<\/strong><p[^>]+>通常迷宮 第1層/);
+});
