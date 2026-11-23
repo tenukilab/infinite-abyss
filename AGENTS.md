@@ -2,7 +2,7 @@
 
 ## 最初に読む
 1. `docs/README.md`（仕様の索引と優先順位）
-2. 変更対象に対応する `docs/*.md`（ジョブ変更は `docs/jobs-and-skills.md` と `docs/job-tree.md`、新通常モンスターは `docs/normal-dungeon-monsters.md`、UIは `docs/ui-navigation.md`、状態異常は `docs/status-effects.md`、図鑑は `docs/encyclopedia.md` を参照）
+2. 変更対象に対応する `docs/*.md`（**ダメージ・HP・熟練技・倍率を変更する場合は必ず `docs/damage-calculation.md` を読む**。ジョブ変更は `docs/jobs-and-skills.md` と `docs/job-tree.md`、新通常モンスターは `docs/normal-dungeon-monsters.md`、UIは `docs/ui-navigation.md`、状態異常は `docs/status-effects.md`、図鑑は `docs/encyclopedia.md` を参照）
 3. `index.html` の実装
 4. 必要時にルート `README.md` の履歴
 
