@@ -96,6 +96,8 @@ function boot(storage = new Map(), { rejectReads = false } = {}) {
     state: window.ABYSS_DEBUG.state,
     stats: window.ABYSS_DEBUG.stats,
     growth: window.ABYSS_DEBUG.grow,
+    codexMonsters: window.ABYSS_DEBUG.codexMonsters,
+    mainFloors: window.ABYSS_DEBUG.mainFloors,
     masteryProcRate: window.ABYSS_DEBUG.masteryProcRate,
     gainExp: window.ABYSS_DEBUG.gainExp,
     changeJob: window.ABYSS_DEBUG.changeJob,
@@ -924,4 +926,55 @@ test('import confirmation cannot overwrite progress saved while the dialog is op
   assert.deepEqual(JSON.parse(importer.storage.get(SAVE_KEY)), otherTab.state());
   assert.equal(otherTab.state().location, 'forest');
   assert.doesNotMatch(importer.toast(), /復元しました/);
+});
+
+
+test('the two Blue-Flame Skeletons have independent IDs and battle records', () => {
+  const game = boot();
+  const name = '青燐の骸骨兵';
+  const monsters = game.codexMonsters();
+  assert.equal(monsters.length, 256);
+  assert.equal(new Set(monsters.map(monster => monster.id)).size, 256);
+  const encounters = monsters.filter(monster => monster.group === 'main' && monster.name === name);
+  assert.deepEqual(encounters.map(monster => monster.floor), [2, 15]);
+
+  const retiredId = 'main:foe:' + name;
+  const otherId = 'main:foe:苔喰いネズミ';
+  const record = { sightings: 7, battles: 7, wins: 7, losses: 0, retreats: 0, drops: {} };
+  const save = game.state();
+  save.codex.monsters = { [retiredId]: record, [otherId]: record };
+  save.unlocked = 15;
+  save.kills[2] = 6;
+  save.baseStats = { str: 50000, mag: 50000, vit: 1000, dex: 10000, agi: 50, luk: 50 };
+
+  const migrated = bootSaved(save).state();
+  assert.deepEqual(migrated.codex.monsters, { [otherId]: record });
+  assert.deepEqual(migrated.kills, save.kills);
+
+  const restored = boot();
+  restored.importText(JSON.stringify({ state: save }));
+  assert.deepEqual(restored.state().codex.monsters, migrated.codex.monsters);
+
+  const withoutCodex = { ...save, history: [{ id: 2, headline: '勝利：' + name, body: '' }] };
+  delete withoutCodex.codex;
+  assert.deepEqual(bootSaved(withoutCodex).state().codex.monsters, {});
+
+  let progress = migrated;
+  for (const { id, floor } of encounters) {
+    const foes = game.mainFloors()[floor].foes;
+    const index = foes.findIndex(foe => foe[0] === name);
+    let seed = 1;
+    for (; seed < 100000; seed++) {
+      let x = seed;
+      x ^= x << 13; x ^= x >>> 17; x ^= x << 5;
+      if (Math.floor((x >>> 0) / 4294967296 * foes.length) === index) break;
+    }
+    const dungeon = bootSaved({ ...progress, floor, rng: seed });
+    dungeon.click({ fight: '1' });
+    progress = boot(dungeon.storage).state();
+    assert.equal(progress.codex.monsters[id].wins, 1);
+    assert.equal(progress.codex.monsters[retiredId], undefined);
+  }
+  assert.deepEqual(encounters.map(({ id }) => progress.codex.monsters[id].wins), [1, 1]);
+  assert.deepEqual(progress.codex.monsters[otherId], record);
 });
