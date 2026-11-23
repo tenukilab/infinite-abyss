@@ -1,0 +1,197 @@
+{
+  "version": 5,
+  "activeJob": "sorcerer",
+  "level": 77,
+  "xp": 34,
+  "hpGrowth": 56,
+  "hp": 103,
+  "gold": 14201,
+  "medals": 76,
+  "baseStats": {
+    "str": 70,
+    "mag": 124,
+    "vit": 62,
+    "dex": 72,
+    "agi": 81,
+    "luk": 25
+  },
+  "casino": {"poker":null,"last":"","plays":0,"purchased":[],"materials":[]},
+  "location": "isekai",
+  "ore": 32,
+  "floor": 5,
+  "unlocked": 5,
+  "kills": {"1":20,"2":30,"3":40,"4":60,"5":72},
+  "wins": 224,
+  "deaths": 4,
+  "battleCount": 230,
+  "bossDefeated": true,
+  "rng": 654321,
+  "nextId": 44,
+  "masterySchema": 1,
+  "equipmentPowerSchema": 1,
+  "magicSchema": 1,
+  "wallGiftSchema": 1,
+  "magics": [
+    {
+      "id": "magic-19",
+      "key": "heal",
+      "name": "ヒール",
+      "kind": "spell",
+      "uses": 1234,
+      "maxUses": 5000,
+      "containerId": "magic-20"
+    },
+    {
+      "id": "magic-20",
+      "key": "sun-stone",
+      "name": "太陽石",
+      "kind": "vessel",
+      "capacity": 3,
+      "multiplier": 3,
+      "spellIds": [
+        "magic-19"
+      ]
+    }
+  ],
+  "equippedMagic": "magic-20",
+  "jobProgress": {
+    "fighter": {"level":1,"xp":0},
+    "mage": {"level":60,"xp":0},
+    "healer": {"level":1,"xp":0},
+    "thief": {"level":1,"xp":0},
+    "archer": {"level":1,"xp":0},
+    "knight": {"level":1,"xp":0},
+    "heavy_knight": {"level":1,"xp":0},
+    "fencer": {"level":1,"xp":0},
+    "sorcerer": {"level":27,"xp":82},
+    "cleric": {"level":1,"xp":0},
+    "elite_archer": {"level":1,"xp":0},
+    "acrobat": {"level":1,"xp":0},
+    "bandit": {"level":1,"xp":0}
+  },
+  "loadouts": {
+    "fighter": {"weapon":"shop-1","head":null,"body":null,"hands":null,"feet":null,"accessory":null},
+    "mage": {"weapon":"shop-1","head":null,"body":null,"hands":null,"feet":null,"accessory":null},
+    "healer": {"weapon":"shop-1","head":null,"body":null,"hands":null,"feet":null,"accessory":null},
+    "thief": {"weapon":"shop-1","head":null,"body":null,"hands":null,"feet":null,"accessory":null},
+    "archer": {"weapon":"shop-1","head":null,"body":null,"hands":null,"feet":null,"accessory":null},
+    "knight": {"weapon":"shop-1","head":null,"body":null,"hands":null,"feet":null,"accessory":null},
+    "heavy_knight": {"weapon":"shop-1","head":null,"body":null,"hands":null,"feet":null,"accessory":null},
+    "fencer": {"weapon":"shop-1","head":null,"body":null,"hands":null,"feet":null,"accessory":null},
+    "sorcerer": {"weapon":"shop-1","head":null,"body":null,"hands":null,"feet":null,"accessory":null},
+    "cleric": {"weapon":"shop-1","head":null,"body":null,"hands":null,"feet":null,"accessory":null},
+    "elite_archer": {"weapon":"shop-1","head":null,"body":null,"hands":null,"feet":null,"accessory":null},
+    "acrobat": {"weapon":"shop-1","head":null,"body":null,"hands":null,"feet":null,"accessory":null},
+    "bandit": {"weapon":"shop-1","head":null,"body":null,"hands":null,"feet":null,"accessory":null}
+  },
+  "inventory": [
+    {
+      "id": "shop-1",
+      "shopSku": "mage-w",
+      "job": "mage",
+      "name": "樫の杖",
+      "slot": "weapon",
+      "stat": {
+        "mag": 3
+      },
+      "baseAttack": 14,
+      "enhance": 2,
+      "price": 90,
+      "mastery": 127,
+      "masteryXp": 13,
+      "maxMastery": 2000,
+      "baseDefense": 0
+    }
+  ],
+  "equipped": {"weapon":"shop-1","head":null,"body":null,"hands":null,"feet":null,"accessory":null},
+  "forest": {
+    "floor": 11,
+    "unlocked": 12,
+    "kills": {
+      "11": 3
+    },
+    "bossesDefeated": {
+      "10": true
+    },
+    "battleRecords": [
+      {
+        "id": 201,
+        "floor": 11,
+        "isBoss": false,
+        "name": "第11階・樹皮の獣",
+        "win": true,
+        "retreated": false,
+        "rounds": 2,
+        "damage": 7,
+        "heal": 0,
+        "exp": 190,
+        "gold": 80,
+        "turns": []
+      }
+    ]
+  },
+  "isekai": {
+    "wins": 4,
+    "losses": 0,
+    "retreats": 1,
+    "encounters": 6,
+    "magicDrops": 1,
+    "pendingBossId": "otherworld-peeluna",
+    "battleRecords": [
+      {
+        "id": 229,
+        "dungeon": "isekai",
+        "name": "毒沼の女帝",
+        "win": true,
+        "retreated": false,
+        "rounds": 5,
+        "damage": 10,
+        "heal": 0,
+        "exp": 200001,
+        "gold": 50000,
+        "magicDrop": {
+          "id": "magic-19",
+          "key": "heal",
+          "name": "ヒール",
+          "uses": 1000,
+          "rarity": "unset"
+        },
+        "turns": []
+      }
+    ]
+  },
+  "history": [
+    {
+      "id": 180,
+      "headline": "ボス撃破：腐敗した騎士",
+      "body": "第5層",
+      "at": "記録 #180"
+    }
+  ],
+  "autoRunProgress": {
+    "status": "running",
+    "dungeon": "isekai",
+    "floor": 1,
+    "isBoss": true,
+    "job": "sorcerer",
+    "target": 20,
+    "completed": 4,
+    "retreatPercent": 10,
+    "stopAtMaster": true,
+    "bossAllowed": true,
+    "stopOnPeeluna": true,
+    "magicDrops": 1,
+    "magicFound": ["ヒール"],
+    "rareEncounters": 0,
+    "exp": 810000,
+    "gold": 210000,
+    "ore": 4,
+    "levelUps": 1,
+    "jobUps": 1,
+    "masteryExp": 7,
+    "magicUsed": 6,
+    "startedAt": 1700000000000,
+    "lastHP": 103,
+    "maxHP": 354
+  }
+}
