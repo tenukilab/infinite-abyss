@@ -17,8 +17,8 @@
 | 各種マスターデータ | `jobs` / `levelGrowth` / `skills` / `jobRequirements` | ジョブ・成長・条件 |
 | 装備・魔法 | `shopCatalog` / `MAGIC_CATALOG` / `masteryTechnique` / `powerValues` | 装備、熟練、効果 |
 | ダンジョン | `floors` / `FOREST_BOSSES` / `ISEKAI_BOSSES` / `PEELUNA_BOSS` | 敵データ |
-| 戦闘 | `fightOne()` | 3ダンジョン共通の戦闘ループ |
-| 図鑑 | `CODEX_MONSTERS` / `normalizeCodex()` / `markCodexBattle()` / `codexHTML()` | 56種のID、旧セーブの復元、戦績累積、図鑑表示 |
+| 戦闘 | `fightOne()` / `accuracy()` / `derived()` | 3ダンジョン共通の戦闘ループ。適用順・丸め処理は [ダメージ計算仕様](damage-calculation.md) を基準に確認 |
+| 図鑑 | `CODEX_MONSTERS` / `normalizeCodex()` / `markCodexBattle()` / `codexHTML()` | 256種のID、旧セーブの復元、戦績累積、図鑑表示 |
 | 経験値 | `gainExperience()` | 総合Lv・現ジョブLv・永久能力値加算 |
 | 自動周回 | `startAutoRun()` / `runAutoStep()` / `finishAutoRun()` | 逐次戦闘・停止条件 |
 | 手動戦闘 | `run()` | 指定回数の戦闘／記録 |
@@ -31,7 +31,7 @@
 
 ## 3. セーブ構造
 
-- 現行セーブキー：**`infinite-abyss-save-v5`**、`VERSION=5`。画面のプロトタイプ版数（v0.18）とは別。
+- 現行セーブキー：**`infinite-abyss-save-v5`**、`VERSION=5`。画面のプロトタイプ版数（v0.23）とは別。
 - 主なフィールド：
   - キャラ：`activeJob`、`level`、`xp`、`baseStats`、`hpGrowth`、`hp`。
   - 職業：`jobProgress`（ジョブIDごとのLvとEXP）、`loadouts`（互換目的で保持）。
