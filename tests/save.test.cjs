@@ -38,6 +38,7 @@ function boot(storage = new Map(), { rejectReads = false } = {}) {
     if (!elements.has(selector)) {
       elements.set(selector, {
         classList: { add() {}, remove() {} },
+        style: {},
         click() {},
         remove() {},
         scrollIntoView() {},
@@ -67,7 +68,7 @@ function boot(storage = new Map(), { rejectReads = false } = {}) {
       },
       removeItem: key => storage.delete(key),
     },
-    console: { warn() {} },
+    console: { warn() {}, error: (...args) => console.error(...args) },
     FileReader: class {
       readAsText(file) {
         this.result = file;
@@ -1033,11 +1034,7 @@ test('auto-run requires a successful save before starting', async t => {
 test('auto-run stops after the first unsaved battle and keeps the result available for export', async t => {
   for (const failure of ['storage full', 'other tab']) {
     await t.test(failure, async () => {
-      const save = currentSave();
-      save.hp = 40_000;
-      save.hpGrowth = 40_000;
-      save.baseStats.mag = ABILITY_LIMIT;
-      const game = bootSaved(save);
+      const game = bootSaved(autoRunSave());
       configureAutoRun(game);
       game.click({ auto: 'start' });
       game.stepAutoRun();
@@ -1067,4 +1064,105 @@ test('auto-run stops after the first unsaved battle and keeps the result availab
       assert.equal(exported.gold, progress.gold);
     });
   }
+});
+
+function autoRunSave() {
+  const save = currentSave();
+  save.hpGrowth = 40_000;
+  save.hp = 40_000;
+  Object.assign(save.baseStats, { mag: ABILITY_LIMIT, dex: ABILITY_LIMIT });
+  return save;
+}
+
+test('auto-run rejects 1,001 battles and saves exactly 1,000 at the limit', () => {
+  const game = bootSaved(autoRunSave());
+  configureAutoRun(game, 1001);
+  game.click({ auto: 'start' });
+  assert.equal(game.state().autoRunProgress, null);
+
+  configureAutoRun(game, 1000);
+  game.click({ auto: 'start' });
+  for (let step = 0; step < 1001; step++) game.stepAutoRun();
+  const progress = boot(game.storage).state();
+  assert.equal(progress.battleCount, 1000);
+  assert.equal(progress.wins, 1000);
+  assert.equal(progress.lastAutoRun.completed, 1000);
+  assert.equal(progress.lastAutoRun.reason, '周回数の上限に到達');
+  assert.equal(progress.autoRunProgress, null);
+});
+
+test('manual stop and reload retain completed auto-run battles without resuming', async t => {
+  for (const stop of ['manual', 'reload']) {
+    await t.test(stop, () => {
+      const game = bootSaved(autoRunSave());
+      configureAutoRun(game);
+      game.click({ auto: 'start' });
+      game.stepAutoRun();
+
+      if (stop === 'manual') game.click({ auto: 'stop' });
+      const reopened = boot(game.storage);
+      reopened.stepAutoRun();
+      const progress = reopened.state();
+      assert.equal(progress.battleCount, 1);
+      assert.equal(progress.wins, 1);
+      assert.equal(progress.lastAutoRun.completed, 1);
+      assert.equal(progress.autoRunProgress, null);
+      assert.match(progress.lastAutoRun.reason, stop === 'manual' ? /手動停止/ : /再読み込み/);
+    });
+  }
+});
+
+test('auto-run stops at the HP threshold or when the active job reaches MASTER', async t => {
+  await t.test('HP at the exact threshold rejects the start', () => {
+    const save = currentSave();
+    save.hp = 39;
+    const game = bootSaved(save);
+    configureAutoRun(game);
+    game.setInput('#autoRetreat', '50');
+    game.click({ auto: 'start' });
+    game.stepAutoRun();
+    assert.equal(game.state().battleCount, 0);
+    assert.match(game.toast(), /HPが撤退条件/);
+  });
+
+  await t.test('the victory that earns MASTER is the last battle', () => {
+    const save = autoRunSave();
+    save.jobProgress.mage = { level: 59, xp: 8889 };
+    const game = bootSaved(save);
+    configureAutoRun(game);
+    game.setChecked('#autoMaster', true);
+    game.click({ auto: 'start' });
+    game.stepAutoRun();
+    game.stepAutoRun();
+    const progress = boot(game.storage).state();
+    assert.equal(progress.jobProgress.mage.level, 60);
+    assert.equal(progress.battleCount, 1);
+    assert.equal(progress.lastAutoRun.reason, 'ジョブマスター到達');
+  });
+});
+
+test('rare auto-run encounter is saved without fighting and consumed by a manual fight', () => {
+  const save = highLevelBattleSave('guardian', 'isekai');
+  save.rng = 3683737958;
+  const game = bootSaved(save);
+  configureAutoRun(game);
+  game.setChecked('#autoPeeluna', true);
+  game.click({ auto: 'start' });
+  game.stepAutoRun();
+
+  const reopened = boot(game.storage);
+  const id = 'otherworld-peeluna';
+  const record = () => reopened.state().codex.monsters['isekai:' + id];
+  assert.equal(reopened.state().isekai.pendingBossId, id);
+  assert.equal(reopened.state().lastAutoRun.completed, 0);
+  assert.equal(reopened.state().battleCount, 0);
+  assert.equal(record().sightings, 1);
+  assert.equal(record().battles, 0);
+
+  reopened.click({ isekaifight: '1' });
+  assert.equal(reopened.state().isekai.pendingBossId, null);
+  assert.equal(reopened.state().battleCount, 1);
+  assert.equal(record().sightings, 1);
+  assert.equal(record().battles, 1);
+  assert.equal(reopened.state().isekai.battleRecords[0].name, '異世界に迷い込んだぴーるな');
 });
