@@ -118,7 +118,7 @@ const ITEM_CATALOG={};
 const FOREST_BOSS_DROP_TABLES=Object.fromEntries(Object.keys(FOREST_BOSSES).map(k=>[k,{items:[],magics:[]} ]));
 // The Otherworld has NO floors. Each challenge rolls one of 26 independent bosses.
 // Abilities use a shared effect engine. Numbers and drop rarity tiers are provisional.
-const ISEKAI_MAGIC_DROP_RATE=.01, ISEKAI_RECORD_LIMIT=30, ISEKAI_DROP_USES=3000;
+const ISEKAI_MAGIC_DROP_RATE=.01, ISEKAI_MAGIC_DROP_TREASURE_MULTIPLIER=5, ISEKAI_RECORD_LIMIT=30, ISEKAI_DROP_USES=3000;
 const ISEKAI_ROSTER=[
  ['毒沼の女帝','毒・回復封じ',11000000,4600,[['poison',.45,3],['healSeal',.30,3]]],
  ['断罪の雷帝','麻痺・必殺',13000000,5300,[['paralysis',.22,1],['heavy',.22,9]]],
@@ -753,8 +753,9 @@ function normalizeIsekai(s){
  if(s.isekai.battleRecords.length>ISEKAI_RECORD_LIMIT)s.isekai.battleRecords=s.isekai.battleRecords.slice(0,ISEKAI_RECORD_LIMIT);
  return s.isekai;
 }
+const isekaiMagicDropDescription='魔法ドロップは基本'+num(ISEKAI_MAGIC_DROP_RATE*100)+'%、トレジャーハンターは'+num(ISEKAI_MAGIC_DROP_RATE*ISEKAI_MAGIC_DROP_TREASURE_MULTIPLIER*100)+'%。';
 function rollIsekaiMagicDrop(){
- if(rand()>=Math.min(1,ISEKAI_MAGIC_DROP_RATE*(state.activeJob==='treasure_hunter'?5:1)))return null;
+ if(rand()>=Math.min(1,ISEKAI_MAGIC_DROP_RATE*(state.activeJob==='treasure_hunter'?ISEKAI_MAGIC_DROP_TREASURE_MULTIPLIER:1)))return null;
  const pool=ISEKAI_MAGIC_DROP_POOL();if(!pool.length)return null;
  const def=randPick(pool),id='magic-'+state.nextId++;
  const spell={id,key:def.key,name:def.name,kind:'spell',uses:ISEKAI_DROP_USES,maxUses:MAGIC_USES_MAX,containerId:null};
@@ -1386,7 +1387,7 @@ function resolveBattle(f,isBoss,dungeon,selectedFoe){const foe=dungeon==='isekai
   const exp=Math.floor(Math.floor(foe.exp*TIMEOUT_EXP_RATE)*(state.activeJob==='floraflulu'?1.5:1)),levels=gainExperience(exp);
   if(dungeon==='isekai')state.isekai.retreats++;
   markCodexBattle(foe,dungeon,isBoss,'retreat');
-  logEntry('撤退：'+foe.name,BATTLE_TURN_LIMIT+'ターン時間切れ。経験値70%（+'+num(exp)+' EXP）、獲得Gなし。');
+  logEntry('撤退：'+foe.name,BATTLE_TURN_LIMIT+'ターン時間切れ。基準経験値70%・職業補正適用後（+'+num(exp)+' EXP）、獲得Gなし。');
   return {name:foe.name,win:false,retreated:true,rounds,damage,heal,misses,dodges,surges,actions,turnLogs,skillUses,magicUses,masteryGains,magicDrop:null,exp,gold:0,ore:0,levelUps:levels.general,jobUps:levels.job};
  }
  if(failed){markCodexBattle(foe,dungeon,isBoss,'loss');state.deaths++;const loss=Math.floor(state.gold*.1);state.gold-=loss;
@@ -1421,7 +1422,7 @@ function resolveBattle(f,isBoss,dungeon,selectedFoe){const foe=dungeon==='isekai
  const skLog=Object.entries(skillUses).map(([n,v])=>n+'×'+v).join('、');
  const magicLog=Object.entries(magicUses).map(([n,v])=>n+'×'+v).join('、');
  const masteryLog=masteryGains.map(x=>x.name+' 熟練EXP+'+x.exp+(x.levels?'／熟練+'+x.levels:'')).join('、');
- logEntry((isBoss?'ボス撃破：':'勝利：')+foe.name,(dungeon==='forest'?'魔の森 第'+f+'階 / ':dungeon==='isekai'?'異世界 / ':'')+rounds+'ターン / EXP+'+foe.exp+' / '+gold+'G'+(skLog?' / '+skLog:'')+(magicLog?' / 魔法：'+magicLog:'')+(magicDrop?' / 魔法ドロップ：'+magicDrop.name:'')+(ore?' / 鉱石+'+ore:'')+(masteryLog?' / '+masteryLog:''));
+ logEntry((isBoss?'ボス撃破：':'勝利：')+foe.name,(dungeon==='forest'?'魔の森 第'+f+'階 / ':dungeon==='isekai'?'異世界 / ':'')+rounds+'ターン / EXP+'+awardedExp+' / '+gold+'G'+(skLog?' / '+skLog:'')+(magicLog?' / 魔法：'+magicLog:'')+(magicDrop?' / 魔法ドロップ：'+magicDrop.name:'')+(ore?' / 鉱石+'+ore:'')+(masteryLog?' / '+masteryLog:''));
  return {name:foe.name,win:true,rounds,damage,heal,misses,dodges,surges,skillUses,magicUses,masteryGains,actions,turnLogs,magicDrop,exp:awardedExp,gold,ore,levelUps:levels.general,jobUps:levels.job};
 }
 // Auto expedition executes the SAME fightOne engine as manual fights, yielding to the browser
@@ -1455,7 +1456,7 @@ function autoRunPanelHTML(dungeon){
   <label class="auto-check"><input type="checkbox" id="autoBoss" checked>ボスの再戦周回を許可</label>
   ${dungeon==='isekai'?`<label class="auto-check"><input type="checkbox" id="autoPeeluna" checked>ぴーるな遭遇時に停止（遭遇を保存して手動挑戦できる）</label>`:''}
   ${rareText?`<div class="notice" style="margin-top:10px">${esc(rareText)}</div>`:''}
-  <p class="hint">${dungeon==='isekai'?'異世界は毎戦ボスを再抽選。通常25体と0.01%のぴーるな。勝利すると1%で魔法ドロップ。':isBoss?'この階ではボス戦を周回。通常迷宮のボスは再戦できないため、討伐後に停止。':'通常の敵と戦闘。'} <strong>150ターン撤退でも即停止。</strong> 1戦ごとに保存。iPhoneの画面を閉じている間は進みません。</p>
+  <p class="hint">${dungeon==='isekai'?'異世界は毎戦ボスを再抽選。通常25体と0.01%のぴーるな。勝利時の'+isekaiMagicDropDescription:isBoss?'この階ではボス戦を周回。通常迷宮のボスは再戦できないため、討伐後に停止。':'通常の敵と戦闘。'} <strong>150ターン撤退でも即停止。</strong> 1戦ごとに保存。iPhoneの画面を閉じている間は進みません。</p>
   <button class="btn primary" data-auto="start" style="width:100%">▶ 自動周回を開始</button>`}
  ${!running&&summary?`<hr class="divider"><strong class="small">前回の自動周回：${esc(summary.reason||'終了')}</strong><p class="small muted">${esc(locationText)} / ${num(summary.completed)} / ${num(summary.target)}戦 / EXP+${num(summary.exp)} / ${num(summary.gold)}G / 熟練EXP+${num(summary.masteryExp)}${dungeon==='isekai'?' / 魔法ドロップ '+num(summary.magicDrops||0)+'個':''}</p>${dungeon==='isekai'&&summary.magicFound&&Object.keys(summary.magicFound).length?`<p class="small muted">獲得魔法：${Object.entries(summary.magicFound).map(([name,n])=>esc(name)+' ×'+num(n)).join(' / ')}</p>`:''}`:''}
  </section>`;
@@ -1648,7 +1649,7 @@ function isekaiHTML(){
  return `<section class="panel"><div class="kicker">OTHERWORLD · RANDOM BOSS BATTLE</div><div class="split"><div><h2 class="sectiontitle">✦ 異世界</h2><p class="intro">階層なし。通常の25体は均等抽選。ごくまれに「異世界に迷い込んだぴーるな」が出現する。全ボスが特殊な行動を持つ。</p></div><button class="btn ghost" data-travel="main">⌂ 拠点へ戻る</button></div>
  <div class="info"><span class="pill gold">通常25体＋激レア1体</span><span class="pill">ぴーるな出現0.01%</span><span class="pill">勝利 ${num(x.wins)} 回</span><span class="pill">敗北 ${num(x.losses)} 回</span><span class="pill">撤退 ${num(x.retreats)} 回</span><span class="pill good">魔法ドロップ 1%</span></div>
  <div class="notice" style="margin-top:14px">HPは魔の森50階級。毒・出血・麻痺・暗闇・攻撃弱体・回復封じ・魔法封印・防御破壊・防御壁破壊・HP貫通攻撃など、ボスごとに異なる対策が必要。拠点のアクセサリー店には耐性装備、魔法店にはキュアがあり、リレイズは異世界ドロップ専用。通常のボスはHP50%以下で暴走する。例外の「異世界に迷い込んだぴーるな」は命中率固定0.001%、普段は猫らしく過ごすが毎ターン0.05%で必中即死の「ねこパンチ」を使う。</div>
- <div class="split" style="margin-top:15px"><div><strong>魔法ドロップ</strong><p class="small muted">勝利時に1%で魔法1個。現存する6種類は均等（各当選時約16.67%）。ドロップは3,000回。将来のレアリティ制に対応する項目を準備済み。</p></div><span class="pill">累計獲得 ${num(x.magicDrops)} 個</span></div>
+ <div class="split" style="margin-top:15px"><div><strong>魔法ドロップ</strong><p class="small muted">勝利時の${isekaiMagicDropDescription}当選すると魔法1個。現存する6種類は均等（各当選時約16.67%）。ドロップは3,000回。将来のレアリティ制に対応する項目を準備済み。</p></div><span class="pill">累計獲得 ${num(x.magicDrops)} 個</span></div>
  ${pendingIsekaiBoss()?`<div class="notice" style="margin-top:14px"><strong>遭遇中：${esc(pendingIsekaiBoss().name)}</strong><p class="small muted">この相手を保存済み。次に手動で挑戦すると、このボスとの戦闘が始まる。拠点へ戻っても遭遇は消えない。</p></div>`:''}
  <div class="buttonrow" style="margin-top:16px"><button class="btn gold" data-isekaifight="1">⚔ ${pendingIsekaiBoss()?'遭遇中のボスに挑戦':'ランダムボスに挑戦（1戦）'}</button></div>
  <p class="hint">通常ボスは均等抽選。ぴーるなは0.01%で出現。全戦闘150ターン制限で、時間切れなら経験値70%・Gなしの撤退（死亡扱いにはならない）。通常敗北は従来どおり所持Gの10%を失う。自動周回も時間切れで停止する。</p></section>${autoRunPanelHTML('isekai')}${resultHTML()}${isekaiRecordsHTML()}`;
@@ -1683,7 +1684,7 @@ function renderHero(){const d=derived(),hp=currentHP(d),p=state.jobProgress[stat
 function resultHTML(){if(!lastResult)return '';
  const r=lastResult;return `<section class="result" id="lastResult"><div class="kicker">AUTO BATTLE RESULTS</div><h3>${esc(r.reason)}</h3><div class="resultgrid">${[
  [r.results.filter(x=>x.win).length+'/'+r.results.length,'勝利 / 戦闘'],['+'+num(r.exp),'EXP'],['+'+num(r.gold)+' G','獲得G'],[r.surges,'魔力暴走'],[r.misses,'攻撃ミス'],[r.dodges,'回避成功']
- ].map(([v,k])=>`<div class="metric"><b>${v}</b><small>${k}</small></div>`).join('')}</div><hr class="divider"><div class="small">総合LvUP +${r.levelUps} / ジョブLvUP +${r.jobUps} / 鉱石 +${r.ore} / ${r.dungeon==='forest'?'素材・魔法ドロップなし（空テーブル）':r.dungeon==='isekai'?'魔法ドロップ率1%':'装備ドロップなし'}</div><div class="small" style="margin-top:8px">${r.masteryTotals.length?r.masteryTotals.map(x=>esc(x.name)+' 熟練EXP +'+x.exp+(x.levels?'（熟練+'+x.levels+'）':'')).join(' / '):'熟練EXP：獲得対象なし・上限到達'}</div><div class="small" style="margin-top:8px">魔法ドロップ：${r.dungeon==='isekai'?(r.results.map(x=>x.magicDrop?.name).filter(Boolean).map(esc).join(' / ')||'なし'):'対象外'}</div><div class="small" style="margin-top:8px">魔法：${Object.keys(r.magicTotals||{}).length?Object.entries(r.magicTotals).map(([n,c])=>esc(n)+'×'+c).join(' / '):'発動なし'}</div>${['forest','isekai'].includes(r.dungeon)?'<p class="hint">下の戦闘記録にある「記録」をタップすると、全ターンの処理を確認できます。</p>':`<details style="margin-top:12px"><summary class="small muted">戦闘の内訳</summary>${r.results.map((b,i)=>`<p class="small" style="line-height:1.75"><strong>#${state.battleCount-r.results.length+i+1} ${esc(b.name)}</strong> / ${b.win?'勝利':b.retreated?'撤退':'敗北'} / ${b.rounds}T / 被ダメ${b.damage}<span class="muted tiny" style="display:block">${esc(b.actions.join(' ／ '))}</span></p>`).join('')}</details>`}</section>`;
+ ].map(([v,k])=>`<div class="metric"><b>${v}</b><small>${k}</small></div>`).join('')}</div><hr class="divider"><div class="small">総合LvUP +${r.levelUps} / ジョブLvUP +${r.jobUps} / 鉱石 +${r.ore} / ${r.dungeon==='forest'?'素材・魔法ドロップなし（空テーブル）':r.dungeon==='isekai'?isekaiMagicDropDescription:'装備ドロップなし'}</div><div class="small" style="margin-top:8px">${r.masteryTotals.length?r.masteryTotals.map(x=>esc(x.name)+' 熟練EXP +'+x.exp+(x.levels?'（熟練+'+x.levels+'）':'')).join(' / '):'熟練EXP：獲得対象なし・上限到達'}</div><div class="small" style="margin-top:8px">魔法ドロップ：${r.dungeon==='isekai'?(r.results.map(x=>x.magicDrop?.name).filter(Boolean).map(esc).join(' / ')||'なし'):'対象外'}</div><div class="small" style="margin-top:8px">魔法：${Object.keys(r.magicTotals||{}).length?Object.entries(r.magicTotals).map(([n,c])=>esc(n)+'×'+c).join(' / '):'発動なし'}</div>${['forest','isekai'].includes(r.dungeon)?'<p class="hint">下の戦闘記録にある「記録」をタップすると、全ターンの処理を確認できます。</p>':`<details style="margin-top:12px"><summary class="small muted">戦闘の内訳</summary>${r.results.map((b,i)=>`<p class="small" style="line-height:1.75"><strong>#${state.battleCount-r.results.length+i+1} ${esc(b.name)}</strong> / ${b.win?'勝利':b.retreated?'撤退':'敗北'} / ${b.rounds}T / 被ダメ${b.damage}<span class="muted tiny" style="display:block">${esc(b.actions.join(' ／ '))}</span></p>`).join('')}</details>`}</section>`;
 }
 function exploreHTML(){const f=state.floor,v=floors[f],done=state.kills[f]||0,need=v.need,available=state.unlocked;
  const band=clamp(mainFloorBand,0,Math.ceil(MAIN_MAX_FLOOR/10)-1),start=band*10+1;
@@ -1755,7 +1756,7 @@ function magicShopHTML(){
  <div class="itemlist">${inventory||'<div class="empty">まだ魔法を持っていません。</div>'}</div></section>`;
 }
 
-function townHTML(){return `<section class="panel"><h2 class="sectiontitle">拠点の施設</h2><div class="island-gate"><div><strong>⛵ カジノ島への航路</strong><p class="small muted">ゴールドをメダルに換えて遊ぶ娯楽の島。景品交換所には強力な武器も。</p></div><button class="btn gold" data-travel="casino">カジノ島へ渡る</button></div><div class="island-gate"><div><strong>✦ 異世界への門</strong><p class="small muted">通常ボス25体と、出現率0.01%の『異世界に迷い込んだぴーるな』。勝利時は1%で魔法が落ちる。</p></div><button class="btn gold" data-travel="isekai">異世界へ挑む</button></div><div class="island-gate"><div><strong>🌲 魔の森への道</strong><p class="small muted">全50階、10階ごとにボス。進行度は通常迷宮と独立。将来は素材・魔法を掘る場所になる。</p></div><button class="btn primary" data-travel="forest">魔の森へ向かう</button></div><div class="shopnav">${[['weapon','武器屋'],['armor','防具屋'],['accessory','アクセサリー店'],['magic','魔法店'],['services','宿屋・鍛冶屋']].map(([k,n])=>`<button class="btn ${townSection===k?'primary':''}" data-town="${k}">${n}</button>`).join('')}</div></section>${townSection==='magic'?magicShopHTML():townSection==='services'?servicesHTML():shopHTML(townSection)}`;}
+function townHTML(){return `<section class="panel"><h2 class="sectiontitle">拠点の施設</h2><div class="island-gate"><div><strong>⛵ カジノ島への航路</strong><p class="small muted">ゴールドをメダルに換えて遊ぶ娯楽の島。景品交換所には強力な武器も。</p></div><button class="btn gold" data-travel="casino">カジノ島へ渡る</button></div><div class="island-gate"><div><strong>✦ 異世界への門</strong><p class="small muted">通常ボス25体と、出現率0.01%の『異世界に迷い込んだぴーるな』。勝利時の${isekaiMagicDropDescription}</p></div><button class="btn gold" data-travel="isekai">異世界へ挑む</button></div><div class="island-gate"><div><strong>🌲 魔の森への道</strong><p class="small muted">全50階、10階ごとにボス。進行度は通常迷宮と独立。将来は素材・魔法を掘る場所になる。</p></div><button class="btn primary" data-travel="forest">魔の森へ向かう</button></div><div class="shopnav">${[['weapon','武器屋'],['armor','防具屋'],['accessory','アクセサリー店'],['magic','魔法店'],['services','宿屋・鍛冶屋']].map(([k,n])=>`<button class="btn ${townSection===k?'primary':''}" data-town="${k}">${n}</button>`).join('')}</div></section>${townSection==='magic'?magicShopHTML():townSection==='services'?servicesHTML():shopHTML(townSection)}`;}
 function jobCardHTML(j){
  const p=state.jobProgress[j],selected=j===state.activeJob,readonly=state.location!=='main',req=jobRequirements[j]||{masterJobs:[]};
  const locked=!canChangeJob(j),gate=req.masterJobs.map(k=>jobs[k].name+'MASTER').join(' ＋ ');
@@ -1833,7 +1834,7 @@ function codexHTML(){
  ${codexMode==='monsters'?`<div class="codex-switch">${['main','forest','isekai'].map(g=>`<button class="btn ${codexGroup===g?'gold':''}" data-codexgroup="${g}">${CODEX_DUNGEON_NAMES[g]}</button>`).join('')}</div>
  ${codexGroup==='main'?`<div class="forest-bands main-bands codex-main-bands">${Array.from({length:5},(_,i)=>`<button class="btn ${codexMainBand===i?'primary':''}" data-codexmainband="${i}">${i*10+1}〜${(i+1)*10}</button>`).join('')}</div>`:''}<div class="split"><span class="small muted">${CODEX_DUNGEON_NAMES[codexGroup]}：発見 ${foundGroup} / ${groupTotal}種</span><label class="small muted">表示 <select id="codexFilter" class="input" style="width:auto"><option value="all" ${codexFilter==='all'?'selected':''}>すべて</option><option value="seen" ${codexFilter==='seen'?'selected':''}>遭遇済み</option><option value="unseen" ${codexFilter==='unseen'?'selected':''}>未遭遇</option></select></label></div>
  <div class="codex-grid">${monsterList.map((e,i)=>codexMonsterCard(e,monsters.indexOf(e))).join('')||'<div class="empty">この条件に一致する敵はいません。</div>'}</div>`:
- `<p class="hint">魔法のレアリティ重みは未実装。現時点の異世界ドロップ率は勝利ごとに1%、当選後は全6魔法から均等抽選。</p><div class="codex-grid">${spells.map(codexMagicCard).join('')}</div>`}
+ `<p class="hint">魔法のレアリティ重みは未実装。勝利時の${isekaiMagicDropDescription}当選後は全6魔法から均等抽選。</p><div class="codex-grid">${spells.map(codexMagicCard).join('')}</div>`}
  <p class="hint" style="margin-top:17px">旧セーブの戦績は残っていた戦闘記録（魔の森・異世界の直近30戦、通常迷宮の保存ログ）から復元。過去の全戦闘を網羅するものではなく、図鑑導入後の新しい戦闘はすべて累積保存する。</p></section>`;
 }
 function recordHTML(){return `<section class="panel"><div class="kicker">ADVENTURE JOURNAL</div><h2 class="sectiontitle">冒険記録とセーブ</h2><div class="info"><span class="pill">${num(state.wins)}勝・${state.deaths}敗</span><span class="pill">到達第${state.unlocked}層</span><span class="pill">鉱石${num(state.ore)}</span><span class="pill">魔の森：第${state.forest.unlocked}階</span></div>

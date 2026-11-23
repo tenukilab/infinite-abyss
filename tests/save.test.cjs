@@ -97,6 +97,7 @@ function boot(storage = new Map(), { rejectReads = false } = {}) {
     stats: window.ABYSS_DEBUG.stats,
     growth: window.ABYSS_DEBUG.grow,
     codexMonsters: window.ABYSS_DEBUG.codexMonsters,
+    rollIsekaiBoss: window.ABYSS_DEBUG.rollIsekaiBoss,
     mainFloors: window.ABYSS_DEBUG.mainFloors,
     masteryProcRate: window.ABYSS_DEBUG.masteryProcRate,
     gainExp: window.ABYSS_DEBUG.gainExp,
@@ -977,4 +978,20 @@ test('the two Blue-Flame Skeletons have independent IDs and battle records', () 
   }
   assert.deepEqual(encounters.map(({ id }) => progress.codex.monsters[id].wins), [1, 1]);
   assert.deepEqual(progress.codex.monsters[otherId], record);
+});
+
+test('the rare boss is selected only below the 0.01 percent encounter threshold', () => {
+  const save = currentSave();
+  // These seeds produce adjacent 32-bit rolls on either side of the threshold.
+  const rare = bootSaved({ ...save, rng: 3683737958 });
+  const ordinary = bootSaved({ ...save, rng: 690283599 });
+  assert.equal(rare.rollIsekaiBoss(), '異世界に迷い込んだぴーるな');
+  assert.notEqual(ordinary.rollIsekaiBoss(), '異世界に迷い込んだぴーるな');
+});
+
+test('victory logs show the EXP actually awarded by the current job', () => {
+  const { state, result } = fightFromSave(forestEffectSave('floraflulu', { floor: 1 }));
+  assert.equal(result.win, true);
+  assert.equal(result.exp, 37);
+  assert.match(state.history[0].body, /EXP\+37 \/ /);
 });
