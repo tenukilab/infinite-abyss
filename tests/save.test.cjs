@@ -995,3 +995,76 @@ test('victory logs show the EXP actually awarded by the current job', () => {
   assert.equal(result.exp, 37);
   assert.match(state.history[0].body, /EXP\+37 \/ /);
 });
+
+function configureAutoRun(game, target = 3) {
+  game.setInput('#autoMax', String(target));
+  game.setInput('#autoRetreat', '0');
+  game.setChecked('#autoBoss', true);
+}
+
+test('auto-run requires a successful save before starting', async t => {
+  await t.test('storage is full', () => {
+    const game = boot();
+    const bytes = game.storage.get(SAVE_KEY);
+    configureAutoRun(game);
+    game.rejectWrites();
+    game.click({ auto: 'start' });
+    game.stepAutoRun();
+    const progress = game.state();
+    assert.equal(progress.battleCount, 0);
+    assert.equal(progress.autoRunProgress, null);
+    assert.match(game.toast(), /保存/);
+    assert.equal(game.storage.get(SAVE_KEY), bytes);
+  });
+
+  await t.test('unreadable save in recovery', () => {
+    const original = '{broken JSON';
+    const game = boot(new Map([[SAVE_KEY, original]]));
+    configureAutoRun(game);
+    game.click({ auto: 'start' });
+    game.stepAutoRun();
+    assert.equal(game.state().battleCount, 0);
+    assert.equal(game.state().autoRunProgress, null);
+    assert.equal(game.storage.get(SAVE_KEY), original);
+    assert.match(game.toast(), /復旧/);
+  });
+});
+
+test('auto-run stops after the first unsaved battle and keeps the result available for export', async t => {
+  for (const failure of ['storage full', 'other tab']) {
+    await t.test(failure, async () => {
+      const save = currentSave();
+      save.hp = 40_000;
+      save.hpGrowth = 40_000;
+      save.baseStats.mag = ABILITY_LIMIT;
+      const game = bootSaved(save);
+      configureAutoRun(game);
+      game.click({ auto: 'start' });
+      game.stepAutoRun();
+      assert.equal(JSON.parse(game.storage.get(SAVE_KEY)).battleCount, 1);
+
+      if (failure === 'storage full') {
+        game.rejectWrites();
+      } else {
+        const other = boot(game.storage);
+        other.click({ fight: '1' });
+        other.click({ fight: '1' });
+      }
+      const bytes = game.storage.get(SAVE_KEY);
+      game.stepAutoRun();
+      game.stepAutoRun();
+      assert.equal(game.storage.get(SAVE_KEY), bytes);
+      const progress = game.state();
+      assert.equal(progress.battleCount, 2);
+      assert.equal(progress.autoRunProgress, null);
+      assert.equal(progress.lastAutoRun.completed, 2);
+      assert.match(progress.lastAutoRun.reason, /保存/);
+
+      game.click({ action: 'export' });
+      const exported = JSON.parse(await game.downloads.at(-1).text()).state;
+      assert.equal(exported.battleCount, 2);
+      assert.equal(exported.xp, progress.xp);
+      assert.equal(exported.gold, progress.gold);
+    });
+  }
+});

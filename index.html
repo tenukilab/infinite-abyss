@@ -969,13 +969,14 @@ function persistSave(candidate,expected){
  saveWriteError='';
 }
 function save(){
- if(saveRecovery)return;
+ if(saveRecovery)return false;
  const previousError=saveWriteError;
  try{persistSave(state,storedSave);}catch(e){
   console.warn('save failed',e);
   saveWriteError='進行を保存できませんでした。画面を閉じる前に、現在の進行をJSONで出力してください。';
  }
  if(saveWriteError!==previousError)renderSaveNotice();
+ return !saveWriteError;
 }
 function rand(){let x=state.rng>>>0||0x12345678;x^=x<<13;x^=x>>>17;x^=x<<5;state.rng=x>>>0;return state.rng/4294967296;}
 function ri(a,b){return a+Math.floor(rand()*(b-a+1));}
@@ -1456,7 +1457,7 @@ function autoRunPanelHTML(dungeon){
   <label class="auto-check"><input type="checkbox" id="autoBoss" checked>ボスの再戦周回を許可</label>
   ${dungeon==='isekai'?`<label class="auto-check"><input type="checkbox" id="autoPeeluna" checked>ぴーるな遭遇時に停止（遭遇を保存して手動挑戦できる）</label>`:''}
   ${rareText?`<div class="notice" style="margin-top:10px">${esc(rareText)}</div>`:''}
-  <p class="hint">${dungeon==='isekai'?'異世界は毎戦ボスを再抽選。通常25体と0.01%のぴーるな。勝利時の'+isekaiMagicDropDescription:isBoss?'この階ではボス戦を周回。通常迷宮のボスは再戦できないため、討伐後に停止。':'通常の敵と戦闘。'} <strong>150ターン撤退でも即停止。</strong> 1戦ごとに保存。iPhoneの画面を閉じている間は進みません。</p>
+  <p class="hint">${dungeon==='isekai'?'異世界は毎戦ボスを再抽選。通常25体と0.01%のぴーるな。勝利時の'+isekaiMagicDropDescription:isBoss?'この階ではボス戦を周回。通常迷宮のボスは再戦できないため、討伐後に停止。':'通常の敵と戦闘。'} 150ターン撤退・保存エラーで停止。iPhoneの画面を閉じている間は進みません。</p>
   <button class="btn primary" data-auto="start" style="width:100%">▶ 自動周回を開始</button>`}
  ${!running&&summary?`<hr class="divider"><strong class="small">前回の自動周回：${esc(summary.reason||'終了')}</strong><p class="small muted">${esc(locationText)} / ${num(summary.completed)} / ${num(summary.target)}戦 / EXP+${num(summary.exp)} / ${num(summary.gold)}G / 熟練EXP+${num(summary.masteryExp)}${dungeon==='isekai'?' / 魔法ドロップ '+num(summary.magicDrops||0)+'個':''}</p>${dungeon==='isekai'&&summary.magicFound&&Object.keys(summary.magicFound).length?`<p class="small muted">獲得魔法：${Object.entries(summary.magicFound).map(([name,n])=>esc(name)+' ×'+num(n)).join(' / ')}</p>`:''}`:''}
  </section>`;
@@ -1466,12 +1467,14 @@ function refreshAutoPanel(){const a=autoSession;if(!a?.running)return;
  for(const [id,value] of Object.entries(values)){const el=document.getElementById(id);if(el)el.textContent=value;}
  const meter=document.getElementById('auto-bar');if(meter)meter.style.width=(a.completed/a.target*100)+'%';
 }
-function finishAutoRun(reason){const a=autoSession;if(!a?.running)return;
+function finishAutoRun(reason,{persist=true}={}){const a=autoSession;if(!a?.running)return;
  a.running=false;clearTimeout(a.timer);
  const summary={...autoSnapshot(a),status:'stopped',reason};
  state.autoRunProgress=null;state.lastAutoRun=summary;
  logEntry('自動周回終了：'+reason,(a.dungeon==='isekai'?'異世界':a.dungeon==='forest'?'魔の森 第'+a.floor+'階':'通常迷宮 第'+a.floor+'層')+' / '+a.completed+'/'+a.target+'戦 / EXP+'+a.exp+' / '+a.gold+'G / 熟練EXP+'+a.masteryExp+(a.dungeon==='isekai'?' / 魔法ドロップ '+a.magicDrops+'個':''));
- autoSession=null;save();render();toast('自動周回終了：'+reason);
+ autoSession=null;
+ if(persist)save();
+ render();toast('自動周回終了：'+reason);
 }
 function runAutoStep(){const a=autoSession;if(!a?.running)return;
  // Check again before scheduling a new fight, including browser lifecycle safety.
@@ -1484,8 +1487,7 @@ function runAutoStep(){const a=autoSession;if(!a?.running)return;
    preselected=holdIsekaiBoss();
    if(preselected.passiveCat&&a.stopOnPeeluna){
     a.rareEncounters++;
-    // Persist the encounter before stopping; the next manual battle uses THIS cat.
-    state.autoRunProgress=autoSnapshot(a);save();
+    // The final save includes this encounter for the next manual battle.
     finishAutoRun('異世界に迷い込んだぴーるなに遭遇（戦闘前に停止）');return;
    }
    if(preselected.passiveCat)a.rareEncounters++;
@@ -1504,8 +1506,8 @@ function runAutoStep(){const a=autoSession;if(!a?.running)return;
    state.forest.battleRecords.unshift({id:state.battleCount,floor:a.floor,isBoss:a.isBoss,name:result.name,win:result.win,retreated:!!result.retreated,rounds:result.rounds,damage:result.damage,heal:result.heal,exp:result.exp,gold:result.gold,turns:result.turnLogs||[]});
    if(state.forest.battleRecords.length>FOREST_RECORD_LIMIT)state.forest.battleRecords.length=FOREST_RECORD_LIMIT;
   }
-  // Always persist exactly this battle BEFORE considering the next one.
-  state.autoRunProgress=autoSnapshot(a);save();
+  state.autoRunProgress=autoSnapshot(a);
+  if(!save()){finishAutoRun('保存できなかったため停止',{persist:false});return;}
   if(a.completed%AUTO_DRAW_EVERY===0){renderHero();refreshAutoPanel();}
   if(!result.win){finishAutoRun(result.retreated?'150ターン時間切れ・撤退':'敗北（即停止）');return;}
   if(a.stopAtMaster&&isJobMaster(a.job)){finishAutoRun('ジョブマスター到達');return;}
@@ -1517,6 +1519,7 @@ function runAutoStep(){const a=autoSession;if(!a?.running)return;
 }
 function startAutoRun(){
  if(autoSession?.running){toast('すでに自動周回中');return;}
+ if(saveRecovery){toast('セーブを復旧してから自動周回を開始してください');return;}
  const dungeon=state.location==='isekai'?'isekai':state.location==='forest'?'forest':state.location==='main'&&tab==='explore'?'main':null;
  if(!dungeon){toast('迷宮探索・魔の森・異世界で開始してください');return;}
  const target=Number($('#autoMax')?.value),retreatPercent=Number($('#autoRetreat')?.value);
@@ -1529,7 +1532,12 @@ function startAutoRun(){
  if(stopAtMaster&&isJobMaster(state.activeJob)){toast('現在のジョブはすでにMASTERです。停止設定を変更してください');return;}
  if(currentHP()<=derived().maxHP*retreatPercent/100){toast('HPが撤退条件に達しています。回復してから開始してください');return;}
  autoSession={running:true,dungeon,floor,isBoss,job:state.activeJob,target,completed:0,retreatPercent,stopAtMaster,bossAllowed,stopOnPeeluna,exp:0,gold:0,ore:0,levelUps:0,jobUps:0,masteryExp:0,magicUsed:0,magicDrops:0,magicFound:{},rareEncounters:0,startedAt:new Date().toISOString(),timer:null};
- state.autoRunProgress=autoSnapshot(autoSession);lastResult=null;save();render();
+ state.autoRunProgress=autoSnapshot(autoSession);
+ if(!save()){
+  autoSession=null;state.autoRunProgress=null;
+  toast('保存できなかったため自動周回を開始できません');return;
+ }
+ lastResult=null;render();
  autoSession.timer=setTimeout(runAutoStep,AUTO_TICK_MS);
 }
 function run(count,isBoss=false,dungeon='main'){
