@@ -1306,3 +1306,31 @@ test('the last auto-run summary shows where it happened after moving floors and 
   assert.match(view, /現在：通常迷宮 第2層/);
   assert.match(view, /前回の自動周回：[^<]+<\/strong><p[^>]+>通常迷宮 第1層/);
 });
+
+test('full-length battle records for both dungeons survive v5 reload and JSON transfer', async () => {
+  const saved = currentSave();
+  saved.battleCount = 60;
+  for (const [location, job] of [['forest', 'guardian'], ['isekai', 'floraflulu']]) {
+    const battle = highLevelBattleSave(job, location);
+    battle.level = 1_000_000;
+    battle.forest.floor = battle.forest.unlocked = 50;
+    battle.isekai.pendingBossId = 'otherworld-1';
+    equipTestSpell(battle, 'wall', 'ウォール', 3000);
+    const { result } = fightFromSave(battle);
+    assert.equal(result.turns.length, 150);
+    const lastId = location === 'forest' ? 30 : 60;
+    saved[location].battleRecords = Array.from({ length: 30 }, (_, index) => ({ ...result, id: lastId - index }));
+  }
+
+  const game = bootSaved(saved);
+  const reopened = boot(game.storage);
+  reopened.click({ action: 'export' });
+  const imported = boot();
+  imported.importText(await reopened.downloads.at(-1).text());
+  assert.match(imported.toast(), /データを復元しました/);
+
+  const restored = boot(imported.storage).state();
+  for (const location of ['forest', 'isekai']) {
+    assert.deepEqual(restored[location].battleRecords, saved[location].battleRecords);
+  }
+});
