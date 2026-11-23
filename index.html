@@ -60,7 +60,7 @@
 .herohead{align-items:center;gap:12px}
 .hero h2{font-size:19px;margin:3px 0}
 .hero-main{flex:1;min-width:0}.hero-hp{min-width:112px;max-width:210px;flex:0 0 38%}
-.hero-hp strong{display:block;font-size:14px;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.hero-hp strong{display:block;font-size:14px;font-variant-numeric:tabular-nums;text-align:right}
 .hero-hp .track{margin-top:7px;height:8px}
 .hero-summary{font-size:11px;color:#a4b5c6;margin-top:4px}
 .hero-details{margin-top:11px;position:relative}
@@ -91,7 +91,8 @@
 // Infinite Abyss v0.20 — persistent monster and magic encyclopedia, old-save compatible.
 const KEY='infinite-abyss-save-v5';
 const OLD_KEYS=['infinite-abyss-save-v4','infinite-abyss-save-v3','infinite-abyss-save-v2','infinite-abyss-save-v1'];
-const VERSION=5, JOB_CAP=60, MAX_LEVEL=100000, UPPER_UNLOCK_LEVEL=100000;
+const VERSION=5, JOB_CAP=60, MAX_LEVEL=1000000, UPPER_UNLOCK_LEVEL=100000;
+const BASE_ABILITY_LIMIT=199999, BASE_HP_LIMIT=99999999, GROWTH_POINT_START_LEVEL=100001;
 const BATTLE_TURN_LIMIT=150, TIMEOUT_EXP_RATE=.70, PEELUNA_HIT_RATE=.001; // Percentage, NOT probability fraction.
 const PEELUNA_SPAWN_RATE=.0001, PEELUNA_PUNCH_RATE=.0005; // 0.01% per encounter, 0.05% per turn.
 // New dungeon shares character levels, gear and consumables, but not floor progress.
@@ -248,16 +249,16 @@ const levelGrowth={
  elite_archer:{str:2,mag:.15,vit:.65,dex:3,agi:1,luk:.70},
  acrobat:{str:1.4,mag:.20,vit:.65,dex:2.1,agi:2.5,luk:1},
  bandit:{str:2.5,mag:.10,vit:1.1,dex:1.3,agi:1.4,luk:.75},
- spellblade:{"str":2.1,"mag":2.35,"vit":1.0,"dex":1.5,"agi":1.1,"luk":0.65},
- general:{"str":3.0,"mag":0.2,"vit":2.3,"dex":1.25,"agi":0.55,"luk":0.55},
- paladin:{"str":2.1,"mag":1.35,"vit":2.8,"dex":0.8,"agi":0.45,"luk":0.85},
- court_mage:{"str":0.3,"mag":3.3,"vit":1.35,"dex":1.25,"agi":0.6,"luk":1.0},
- sniper:{"str":2.1,"mag":0.25,"vit":0.85,"dex":3.2,"agi":1.05,"luk":1.15},
- ninja:{"str":1.8,"mag":0.8,"vit":1.0,"dex":2.3,"agi":3.0,"luk":1.0},
- assassin:{"str":2.55,"mag":0.3,"vit":0.9,"dex":3.0,"agi":2.6,"luk":1.35},
- berserker:{"str":3.5,"mag":0.1,"vit":1.5,"dex":1.1,"agi":1.2,"luk":0.7},
- hero:{"str":3.0,"mag":2.1,"vit":2.45,"dex":2.0,"agi":1.65,"luk":1.5},
- grandmaster:{"str":3.25,"mag":2.6,"vit":3.0,"dex":2.7,"agi":2.5,"luk":2.3},
+ spellblade:{str:2.2,mag:2.8,vit:1.2,dex:1.6,agi:1.1,luk:0.7},
+ general:{str:3,mag:0.2,vit:3.2,dex:1.5,agi:0.6,luk:0.7},
+ paladin:{str:2.2,mag:1.7,vit:3.6,dex:0.9,agi:0.5,luk:1.1},
+ court_mage:{str:0.3,mag:4.1,vit:1.4,dex:1.4,agi:0.7,luk:1.2},
+ sniper:{str:2.5,mag:0.2,vit:1,dex:4.1,agi:1.3,luk:1.2},
+ ninja:{str:1.9,mag:0.8,vit:1,dex:2.5,agi:4.1,luk:1.1},
+ assassin:{str:2.9,mag:0.3,vit:1,dex:3.5,agi:2.9,luk:1.7},
+ berserker:{str:4.1,mag:0.1,vit:1.8,dex:1.2,agi:0.9,luk:0.7},
+ hero:{str:3.7,mag:2.6,vit:3.2,dex:2.3,agi:1.8,luk:1.8},
+ grandmaster:{str:3.8,mag:3.6,vit:3.4,dex:3.2,agi:3.1,luk:2.8},
  guardian:{"str":4.0,"mag":1,"vit":4.2,"dex":1.2,"agi":0.8,"luk":0.7},
  weapon_master:{"str":4,"mag":1,"vit":1.5,"dex":2.5,"agi":1.9,"luk":1},
  samurai:{"str":3.3,"mag":1.2,"vit":2.3,"dex":2.3,"agi":2.1,"luk":2.2},
@@ -268,29 +269,29 @@ const levelGrowth={
  sage:{"str":2.1,"mag":4.8,"vit":2.0,"dex":2.7,"agi":1.5,"luk":2}
 };
 const jobs={
- fighter:{name:'戦士',eng:'WARRIOR',mode:'physical',base:[13,5,12,9,7,7],growth:[.85,.25,.85,.55,.4,.3],desc:'力と生命力を中心に成長する近接型。',passive:'今は固有パッシブなし（調整予定）'},
+ fighter:{name:'戦士',eng:'WARRIOR',mode:'physical',base:[13,5,12,9,7,7],growth:[.85,.25,.85,.55,.4,.3],desc:'力と生命力を中心に成長する近接型。',passive:'物理攻撃とジョブスキルの与ダメージ×1.10'},
  mage:{name:'魔法使い',eng:'MAGE',mode:'magic',base:[5,14,7,9,8,8],growth:[.25,1,.5,.6,.5,.35],desc:'魔力で攻撃する術師。',passive:'魔力暴走：攻撃命中時、運に応じた確率でダメージ2.5倍'},
- healer:{name:'ヒーラー',eng:'HEALER',mode:'magic',base:[7,11,10,8,8,8],growth:[.35,.75,.8,.5,.5,.4],desc:'回復効果を持つ魔法スキルを使用する。',passive:'今は固有パッシブなし（調整予定）'},
- thief:{name:'シーフ',eng:'THIEF',mode:'physical',base:[10,6,8,12,13,9],growth:[.7,.3,.5,.9,1,.55],desc:'器用さと素早さを伸ばす連撃型。',passive:'今は固有パッシブなし（調整予定）'},
+ healer:{name:'ヒーラー',eng:'HEALER',mode:'magic',base:[7,11,10,8,8,8],growth:[.35,.75,.8,.5,.5,.4],desc:'回復効果を持つ魔法スキルを使用する。',passive:'ヒールと固定回復スキルの回復量×1.25'},
+ thief:{name:'シーフ',eng:'THIEF',mode:'physical',base:[10,6,8,12,13,9],growth:[.7,.3,.5,.9,1,.55],desc:'器用さと素早さを伸ばす連撃型。',passive:'敵通常攻撃の命中率−5ポイント'},
  archer:{name:'弓使い',eng:'ARCHER',mode:'physical',base:[10,5,8,16,11,9],growth:[.7,.2,.45,1.15,.7,.55],desc:'命中率と器用さを高める遠距離攻撃型。',passive:'照準：攻撃の命中率+10ポイント（最大99%）'},
  knight:{name:'ナイト',eng:'KNIGHT',mode:'physical',base:[12,5,16,9,6,7],growth:[.75,.2,1.2,.45,.25,.2],desc:'生命力が伸び、敵の攻撃を受け止める守備型。',passive:'守護：敵から受けるダメージを10%軽減'},
  heavy_knight:{name:'重騎士',eng:'HEAVY KNIGHT',tier:'intermediate',mode:'physical',base:[14,5,19,8,5,7],growth:[.9,.15,1.5,.45,.2,.25],desc:'厚い鎧で最前線を守る。ナイトMASTERから解放。',passive:'重装防御：被ダメージ20%軽減'},
  fencer:{name:'フェンサー',eng:'FENCER',tier:'intermediate',mode:'physical',base:[15,5,11,15,14,8],growth:[1.1,.2,.65,1,.95,.4],desc:'正確な剣撃で攻める技巧派。戦士MASTERから解放。',passive:'見切り：命中率+5ポイント（最大99%）'},
  sorcerer:{name:'魔術師',eng:'SORCERER',tier:'intermediate',mode:'magic',base:[5,20,9,12,10,10],growth:[.2,1.65,.7,.7,.5,.6],desc:'魔力を極限まで引き出す術者。魔法使いMASTERから解放。',passive:'魔力暴走：命中時に確率で与ダメージ×2.5'},
  cleric:{name:'クレリック',eng:'CLERIC',tier:'intermediate',mode:'magic',base:[8,16,16,10,9,10],growth:[.3,1.1,1.2,.55,.5,.55],desc:'祈りで戦線を支える聖職者。ヒーラーMASTERから解放。',passive:'聖なる加護：毎ターン最大HPの3%回復'},
- elite_archer:{name:'アーチャー',eng:'MASTER ARCHER',tier:'intermediate',mode:'physical',base:[15,5,9,21,14,11],growth:[1.1,.2,.55,1.6,.75,.65],desc:'精密な射撃の上級職。弓使いMASTERから解放。',passive:'精密照準：命中率+15ポイント（最大99%）'},
+ elite_archer:{name:'アーチャー',eng:'MASTER ARCHER',tier:'intermediate',mode:'physical',base:[15,5,9,21,14,11],growth:[1.1,.2,.55,1.6,.75,.65],desc:'精密な射撃を得意とする中級職。弓使いMASTERから解放。',passive:'精密照準：命中率+15ポイント（最大99%）'},
  acrobat:{name:'曲芸師',eng:'ACROBAT',tier:'intermediate',mode:'physical',base:[11,7,10,18,21,13],growth:[.95,.25,.65,1.2,1.45,.85],desc:'手数と身軽さで戦う。シーフと弓使いのMASTERが必要。',passive:'軽業：1ターンの攻撃回数+1'},
  bandit:{name:'バンデット',eng:'BANDIT',tier:'intermediate',mode:'physical',base:[17,5,12,16,15,11],growth:[1.3,.15,.85,1,.9,.65],desc:'力と技巧で報酬を奪う。戦士とシーフのMASTERが必要。',passive:'略奪：勝利時の獲得G+20%'},
- spellblade:{name:'魔法剣士',eng:'SPELLBLADE',tier:'composite',mode:'magic',base:[18,18,12,16,14,10],growth:[2.1,2.35,1.0,1.5,1.1,0.65],desc:'剣技と魔術を合わせる複合職。',passive:'固有パッシブ未設定（仮スキルのみ）'},
- general:{name:'ジェネラル',eng:'GENERAL',tier:'composite',mode:'physical',base:[23,6,20,17,11,10],growth:[3.0,0.2,2.3,1.25,0.55,0.55],desc:'重騎士の堅牢さとフェンサーの技巧を備える。',passive:'固有パッシブ未設定（仮スキルのみ）'},
- paladin:{name:'パラディン',eng:'PALADIN',tier:'composite',mode:'physical',base:[20,14,23,12,9,11],growth:[2.1,1.35,2.8,0.8,0.45,0.85],desc:'聖なる防御と回復に長けた守護戦士。',passive:'固有パッシブ未設定（仮スキルのみ）'},
- court_mage:{name:'宮廷魔術師',eng:'COURT MAGE',tier:'composite',mode:'magic',base:[7,26,14,16,10,13],growth:[0.3,3.3,1.35,1.25,0.6,1.0],desc:'攻撃魔法と治癒術に精通する魔術職。',passive:'固有パッシブ未設定（仮スキルのみ）'},
- sniper:{name:'スナイパー',eng:'SNIPER',tier:'composite',mode:'physical',base:[20,6,11,28,15,14],growth:[2.1,0.25,0.85,3.2,1.05,1.15],desc:'一撃の精度を極めた遠隔狙撃手。',passive:'固有パッシブ未設定（仮スキルのみ）'},
- ninja:{name:'忍者',eng:'NINJA',tier:'composite',mode:'physical',base:[17,10,14,23,27,14],growth:[1.8,0.8,1.0,2.3,3.0,1.0],desc:'身軽さと隠密を武器にする高速職。',passive:'固有パッシブ未設定（仮スキルのみ）'},
- assassin:{name:'アサシン',eng:'ASSASSIN',tier:'composite',mode:'physical',base:[23,7,12,29,26,17],growth:[2.55,0.3,0.9,3.0,2.6,1.35],desc:'忍者と狙撃手を究めた暗殺者。',passive:'固有パッシブ未設定（仮スキルのみ）'},
- berserker:{name:'バーサーカー',eng:'BERSERKER',tier:'composite',mode:'physical',base:[29,5,18,16,17,12],growth:[3.5,0.1,1.5,1.1,1.2,0.7],desc:'暴力的な攻撃に特化した複合職。',passive:'固有パッシブ未設定（仮スキルのみ）'},
- hero:{name:'勇者',eng:'HERO',tier:'composite',mode:'physical',base:[26,21,23,24,20,20],growth:[3.0,2.1,2.45,2.0,1.65,1.5],desc:'5つの複合職を制覇した者だけの称号。',passive:'固有パッシブ未設定（仮スキルのみ）'},
- grandmaster:{name:'グランドマスター',eng:'GRANDMASTER',tier:'special',mode:'physical',base:[30,25,29,29,28,28],growth:[3.25,2.6,3.0,2.7,2.5,2.3],desc:'上級を除く全22職をMASTERにした者。',passive:'固有パッシブ未設定（仮スキルのみ）'},
+ spellblade:{name:'魔法剣士',eng:'SPELLBLADE',tier:'composite',mode:'magic',base:[18,18,12,16,14,10],growth:[2.1,2.35,1.0,1.5,1.1,0.65],desc:'剣技と魔術を合わせる複合職。',passive:'装備魔法が発動したターンの初命中ダメージ×1.25'},
+ general:{name:'ジェネラル',eng:'GENERAL',tier:'composite',mode:'physical',base:[23,6,20,17,11,10],growth:[3.0,0.2,2.3,1.25,0.55,0.55],desc:'重騎士の堅牢さとフェンサーの技巧を備える。',passive:'ガードスキル発動時の軽減率＋5ポイント'},
+ paladin:{name:'パラディン',eng:'PALADIN',tier:'composite',mode:'physical',base:[20,14,23,12,9,11],growth:[2.1,1.35,2.8,0.8,0.45,0.85],desc:'聖なる防御と回復に長けた守護戦士。',passive:'敵の通常攻撃でHPを失い生存したとき、失ったHPの15%を回復'},
+ court_mage:{name:'宮廷魔術師',eng:'COURT MAGE',tier:'composite',mode:'magic',base:[7,26,14,16,10,13],growth:[0.3,3.3,1.35,1.25,0.6,1.0],desc:'攻撃魔法と治癒術に精通する魔術職。',passive:'装備魔法が発動した際、15%で使用回数を消費しない'},
+ sniper:{name:'スナイパー',eng:'SNIPER',tier:'composite',mode:'physical',base:[20,6,11,28,15,14],growth:[2.1,0.25,0.85,3.2,1.05,1.15],desc:'一撃の精度を極めた遠隔狙撃手。',passive:'各ターンの初命中ダメージ×1.30'},
+ ninja:{name:'忍者',eng:'NINJA',tier:'composite',mode:'physical',base:[17,10,14,23,27,14],growth:[1.8,0.8,1.0,2.3,3.0,1.0],desc:'身軽さと隠密を武器にする高速職。',passive:'敵通常攻撃を回避した次のターンの初命中ダメージ×1.30'},
+ assassin:{name:'アサシン',eng:'ASSASSIN',tier:'composite',mode:'physical',base:[23,7,12,29,26,17],growth:[2.55,0.3,0.9,3.0,2.6,1.35],desc:'忍者と狙撃手を究めた暗殺者。',passive:'敵HP30%以下のとき与ダメージ×1.25'},
+ berserker:{name:'バーサーカー',eng:'BERSERKER',tier:'composite',mode:'physical',base:[29,5,18,16,17,12],growth:[3.5,0.1,1.5,1.1,1.2,0.7],desc:'暴力的な攻撃に特化した複合職。',passive:'自分のHP50%以下のとき与ダメージ×1.35、通常被ダメージ×1.10'},
+ hero:{name:'勇者',eng:'HERO',tier:'composite',mode:'physical',base:[26,21,23,24,20,20],growth:[3.0,2.1,2.45,2.0,1.65,1.5],desc:'5つの複合職を制覇した者だけの称号。',passive:['ボスへの通常攻撃とジョブスキルの与ダメージ×1.35','敵の通常攻撃による被ダメージ15%減']},
+ grandmaster:{name:'グランドマスター',eng:'GRANDMASTER',tier:'special',mode:'physical',base:[30,25,29,29,28,28],growth:[3.25,2.6,3.0,2.7,2.5,2.3],desc:'下級・中級・複合の全22職をMASTERにした者。',passive:['全敵への通常攻撃とジョブスキルの与ダメージ×1.20','敵の通常攻撃による被ダメージ20%減','武器・胴の熟練技発動率を各＋3ポイント']},
  guardian:{name:'ガーディアン',eng:'GUARDIAN',tier:'upper',mode:'physical',base:[27,12,28,13,11,10],growth:[2.2,0.55,2.3100000000000005,0.66,0.44000000000000006,0.385],desc:'総合Lv10万・上級以外の全職MASTERで解放。',passive:'最大HP×1.5、30%で敵攻撃無効、胴熟練技発動率×1.3'},
  weapon_master:{name:'ウェポンマスター',eng:'WEAPON MASTER',tier:'upper',mode:'physical',base:[27,12,14,19,16,12],growth:[2.2,0.55,0.8250000000000001,1.375,1.045,0.55],desc:'総合Lv10万・上級以外の全職MASTERで解放。',passive:'最終攻撃ダメージ×2、武器熟練技発動率×1.3'},
  samurai:{name:'武士',eng:'SAMURAI',tier:'upper',mode:'physical',base:[23,13,18,18,17,18],growth:[1.815,0.66,1.265,1.265,1.1550000000000002,1.2100000000000002],desc:'総合Lv10万・上級以外の全職MASTERで解放。',passive:'命中時20%で最終攻撃ダメージ×10〜50'},
@@ -328,7 +329,7 @@ const jobRequirements={
  berserker:{masterJobs:["bandit"]},
  hero:{masterJobs:["spellblade","paladin","general","assassin","berserker"]},
  grandmaster:{masterJobs:[...basicJobKeys,...intermediateJobKeys,...compositeJobKeys]},
- ...Object.fromEntries(upperJobKeys.map(j=>[j,{masterJobs:[...nonUpperJobKeys],minLevel:UPPER_UNLOCK_LEVEL}]))
+ ...Object.fromEntries(upperJobKeys.map(j=>[j,{masterJobs:[...nonUpperJobKeys],minLevel:UPPER_UNLOCK_LEVEL,requiresSpecialRoute:true}]))
 };
 // Master bonuses apply ONLY while actively playing the mastered job.
 const masterPassiveDefinitions={
@@ -344,12 +345,25 @@ const masterPassiveDefinitions={
  cleric:{id:'holy-spring',name:'聖域の泉',desc:'毎ターンのHP回復量が3%→8%に増加'},
  elite_archer:{id:'eagle-eye',name:'鷹の眼',desc:'命中時30%で最終ダメージ×2.5'},
  acrobat:{id:'acrobatic-dance',name:'連舞',desc:'すべての攻撃ダメージ×1.2'},
- bandit:{id:'plunder-master',name:'強奪',desc:'勝利時の獲得Gボーナスが20%→40%に増加'}
+ bandit:{id:'plunder-master',name:'強奪',desc:'勝利時の獲得Gボーナスが20%→40%に増加'},
+ spellblade:{id:'spellblade-mastery',name:'魔法連携',desc:'魔法発動ターンの初命中倍率が×1.25から×1.40に上昇'},
+ general:{id:'general-mastery',name:'ガード強化',desc:'ガード軽減率のボーナスが＋5から＋10ポイントに上昇'},
+ paladin:{id:'paladin-mastery',name:'被弾時回復',desc:'被弾後の回復が失ったHPの15%から25%に上昇'},
+ court_mage:{id:'court-mage-mastery',name:'魔法の節約',desc:'使用回数を消費しない確率が15%から25%に上昇'},
+ sniper:{id:'sniper-mastery',name:'初命中強化',desc:'各ターンの初命中倍率が×1.30から×1.45に上昇'},
+ ninja:{id:'ninja-mastery',name:'回避後の攻撃',desc:'回避した次ターンの初命中倍率が×1.30から×1.45に上昇'},
+ assassin:{id:'assassin-mastery',name:'低HPの敵への攻撃',desc:'敵HP30%以下での与ダメージ倍率が×1.25から×1.40に上昇'},
+ berserker:{id:'berserker-mastery',name:'低HP時の攻撃',desc:'自分のHP50%以下での与ダメージ倍率が×1.35から×1.50に上昇'},
+ hero:{id:'hero-mastery',name:'被弾後の回復',desc:'被弾後にHP35%以下で生存していれば、最大HPの10%を1戦1回回復'},
+ grandmaster:{id:'grandmaster-mastery',name:'状態異常耐性',desc:'状態異常の付与を1戦1回防ぐ'}
 };
 function isJobMaster(job){return !!jobs[job]&&(state.jobProgress?.[job]?.level||0)>=JOB_MASTER_LEVEL;}
 function activeMasterPassive(){return isJobMaster(state.activeJob)?masterPassiveDefinitions[state.activeJob]||null:null;}
-function jobMasterCount(){return jobKeys.filter(isJobMaster).length;}
-function canChangeJob(job){const r=jobRequirements[job];return !!jobs[job]&&state.level>=(r?.minLevel||1)&&(r?.masterJobs||[]).every(isJobMaster);}
+function canChangeJob(job){
+ const requirements=jobRequirements[job];
+ return Object.hasOwn(jobs,job)&&!requirements?.requiresSpecialRoute&&
+  state.level>=(requirements?.minLevel||1)&&(requirements?.masterJobs||[]).every(isJobMaster);
+}
 const SKILL_LEVELS=[5,15,30,45,60];
 // Each skill has its own unlock job level, damage multiplier, base proc rate, optional effect.
 // Roll high-level skills first; one skill maximum per successful attack. Luck modifies proc odds.
@@ -673,8 +687,9 @@ function powerText(item){const p=powerValues(item),parts=[];
  return parts.join(' / ');
 }
 function masteryProcRate(slot=null){const accessory=state.inventory.find(i=>i.id===state.equipped.accessory&&i.slot==='accessory');
- const classMult=(slot==='weapon'&&state.activeJob==='weapon_master')||(slot==='body'&&state.activeJob==='guardian')?1.3:1;
- return clamp(MASTERY_TECH_RATE*(Number(accessory?.masteryProcMultiplier)||1)*classMult,0,100);
+ const classMult=battleActive&&((slot==='weapon'&&state.activeJob==='weapon_master')||(slot==='body'&&state.activeJob==='guardian'))?1.3:1;
+ const classBonus=battleActive&&state.activeJob==='grandmaster'&&MASTERY_SLOTS.includes(slot)?3:0;
+ return clamp(MASTERY_TECH_RATE*(Number(accessory?.masteryProcMultiplier)||1)*classMult+classBonus,0,100);
 }
 function normalizeMastery(item){
  if(!item||typeof item!=='object')return item;
@@ -707,7 +722,7 @@ function grantBattleMastery(){const gains=[];
  return gains;
 }
 const expNeed=l=>{const v=[0,25,40,60,85,115,145,175,220,265];return v[l]??(265+50*(l-9)+5*Math.max(0,l-9)*(l-10)/2);};
-function createState(){return {version:VERSION,activeJob:'mage',level:1,xp:0,hpGrowth:0,hp:78,gold:100,medals:0,baseStats:Object.fromEntries(attrs.map((key,i)=>[key,jobs.mage.base[i]])),casino:makeCasino(),location:'main',ore:0,floor:1,unlocked:1,
+function createState(){return {version:VERSION,activeJob:'mage',level:1,xp:0,growthPoints:0,hpGrowth:0,hp:78,gold:100,medals:0,baseStats:Object.fromEntries(attrs.map((key,i)=>[key,jobs.mage.base[i]])),casino:makeCasino(),location:'main',ore:0,floor:1,unlocked:1,
  kills:Object.fromEntries(Array.from({length:MAIN_MAX_FLOOR},(_,i)=>[i+1,0])),wins:0,deaths:0,battleCount:0,bossDefeated:false,
  rng:0xAB155005,nextId:1,masterySchema:MASTERY_SCHEMA,equipmentPowerSchema:EQUIPMENT_POWER_SCHEMA,magicSchema:MAGIC_SCHEMA,wallGiftSchema:WALL_GIFT_SCHEMA,magics:[],equippedMagic:null,jobProgress:freshJobs(),loadouts:Object.fromEntries(jobKeys.map(j=>[j,blankSlots()])),inventory:[],equipped:blankSlots(),
  forest:makeForest(),isekai:makeIsekai(),codex:newCodex(),autoRunProgress:null,history:[{id:0,headline:'新しい冒険',body:'6能力値・職業育成・カジノ島・装備熟練・魔法へようこそ。',at:'冒険開始'}]};}
@@ -854,6 +869,7 @@ function validSavedPoker(poker){
 }
 function prepareSave(s){
  if(!isRecord(s)||s.version!==VERSION)throw Error('対応するセーブ形式は version 5 です');
+ if(!isOptionalCount(s.growthPoints))throw Error('育成ポイントのデータが不正です');
  const schemas={masterySchema:MASTERY_SCHEMA,equipmentPowerSchema:EQUIPMENT_POWER_SCHEMA,
    magicSchema:MAGIC_SCHEMA,wallGiftSchema:WALL_GIFT_SCHEMA};
  if(!Object.entries(schemas).every(([key,version])=>s[key]===undefined||s[key]===version))
@@ -903,6 +919,7 @@ function prepareSave(s){
   throw Error('カジノのデータが不正です');
  if(s.equippedMagic!=null&&!s.magics?.some(m=>m.id===s.equippedMagic))throw Error('装備中の魔法が不正です');
  upgradeState(s);
+ s.growthPoints??=0;
  if(!slots.every(k=>isReference(s.equipped[k]))||!isReference(s.equippedMagic))throw Error('装備中のアイテムが不正です');
  return s;
 }
@@ -958,18 +975,21 @@ function enhancedAttribute(item){
  if(origin)return origin.mode==='magic'?'mag':'str';
  return (item.stat?.mag||0)>(item.stat?.str||0)?'mag':'str';
 }
-function derived(){
+let battleActive=false;
+const upperBattleHP={guardian:1.5,dark_knight:1.2};
+function derived(inBattle=battleActive){
  const d={...state.baseStats,baseAttack:0,baseDefense:0};
  for(const slot of slots){const i=state.inventory.find(i=>i.id===state.equipped[slot]);if(!i)continue;
   for(const key of attrs)d[key]+=(i.stat?.[key]||0);
   if(i.enhance)d[enhancedAttribute(i)]+=i.enhance;
   const power=powerValues(i);d.baseAttack+=power.attack;d.baseDefense+=power.defense;
  }
- d.maxHP=50+4*d.vit+state.hpGrowth;
- if(state.activeJob==='guardian')d.maxHP=Math.floor(d.maxHP*1.5);
- if(state.activeJob==='dark_knight')d.maxHP=Math.floor(d.maxHP*1.2);
+ for(const stat of attrs)d[stat]=Math.min(d[stat],BASE_ABILITY_LIMIT);
+ d.maxHP=Math.min(50+4*d.vit+state.hpGrowth,BASE_HP_LIMIT);
+ if(inBattle)d.maxHP=Math.floor(d.maxHP*(upperBattleHP[state.activeJob]??1));
  return d;
 }
+function currentHP(stats=derived()){return Math.min(state.hp,stats.maxHP);}
 function actionsPerTurn(agi){return 1+Math.min(3,Math.floor(agi/20));}
 function jobActionsPerTurn(agi){return actionsPerTurn(agi)+(activeMasterPassive()?.id==='swift'||state.activeJob==='acrobat'?1:0);}
 function playerAccuracy(d,foe){if(foe.passiveCat)return PEELUNA_HIT_RATE;
@@ -989,6 +1009,7 @@ function gainExperience(amount){state.xp+=amount;let lv=0,jlv=0;
  while(state.level<MAX_LEVEL&&state.xp>=expNeed(state.level)){
   const oldHP=derived().maxHP;
   state.xp-=expNeed(state.level);state.level++;
+  if(state.level>=GROWTH_POINT_START_LEVEL)state.growthPoints++;
   const currentGrowth=levelGrowth[state.activeJob];
   for(const a of attrs){const n=currentGrowth[a],fixed=Math.floor(n);state.baseStats[a]+=fixed+(rand()<n-fixed?1:0);}
   const vit=derived().vit;
@@ -1047,12 +1068,11 @@ function extractMagic(vesselId,spellId){if(!magicShopAccess())return;
  logEntry('魔法を取り出した',vessel.name+'から'+spell.name+'を取り出した');save();render();toast('魔法を取り出した');
 }
 
-function changeJob(job){if(!canChangeJob(job)||state.activeJob===job)return;
+function changeJob(job){
+ if(!canChangeJob(job)||state.activeJob===job)return;
  const old=state.activeJob;
+ if(upperJobKeys.includes(old)&&!confirm('現在のジョブを離れると、このバージョンでは再び選べません。転職しますか？'))return;
  state.activeJob=job;state.floor=1;
- // Keep current HP, never heal on switching. When leaving HP-multiplier classes, respect the new cap.
- state.hp=Math.min(state.hp,derived().maxHP);
- // Equipment and permanent attributes remain unchanged on job change.
  logEntry('転職：'+jobs[job].name,jobs[old].name+'から転職。総合Lv・6能力値・HP・装備を維持。');lastResult=null;save();render();toast(jobs[job].name+'に転職！');
 }
 function monster(f,isBoss=false){const raw=isBoss?boss:randPick(floors[f].foes);const atk=raw[2];return {name:raw[0],hp:raw[1],str:Math.max(3,Math.round(atk/2)+f),mag:Math.max(3,Math.round(atk/3)+f),vit:4+f*2,dex:6+3*f,agi:4+2*f+ri(0,2),luk:5+f*2,exp:raw[3],gold:raw[4],floor:f};}
@@ -1068,12 +1088,43 @@ function forestMonster(f,isBoss=false){
  const name=FOREST_FOE_NAMES[ri(0,FOREST_FOE_NAMES.length-1)];
  return {name:'第'+f+'階・'+name,hp:Math.round(baseHp*(.90+rand()*.20)),str:Math.round(power*.66),mag:Math.round(power*.57),vit:8+f*2,dex:9+f*3,agi:7+f*2+ri(0,3),luk:6+f*2,exp:Math.round(14+f*11+f*f*.4),gold:Math.round(12+f*8+f*f*.2),floor:f,forest:true,boss:false};
 }
-function fightOne(f,isBoss=false,dungeon='main',selectedFoe=null){const foe=dungeon==='isekai'?takeIsekaiBoss(selectedFoe):dungeon==='forest'?forestMonster(f,isBoss):monster(f,isBoss);let hp=foe.hp,rounds=0,damage=0,heal=0,misses=0,dodges=0,surges=0,actions=[],turnLogs=[],failed=false;const skillUses={},magicUses={};let beerUsed=false,beerActive=false,wallHp=0,berserk=false,paralyzeTurns=0,guaranteedBossHit=false,timedOut=false,reraiseReady=false,reraiseUsed=false,gamblerStack=1;
+function hpAtNewMaximum(hp,oldMax,newMax){
+ return clamp(Math.round(hp*(newMax/oldMax)),hp>0?1:0,newMax);
+}
+function fightOne(f,isBoss=false,dungeon='main',selectedFoe=null){
+ const storedHP=state.hp;
+ const normalStats=derived();
+ const normalHP=currentHP(normalStats);
+ battleActive=true;
+ try{
+  state.hp=hpAtNewMaximum(normalHP,normalStats.maxHP,derived().maxHP);
+  const result=resolveBattle(f,isBoss,dungeon,selectedFoe);
+  const normalMaxHP=derived(false).maxHP;
+  state.hp=result.win||result.retreated?
+   hpAtNewMaximum(state.hp,derived().maxHP,normalMaxHP):Math.max(1,Math.ceil(normalMaxHP*.25));
+  return result;
+ }catch(error){
+  state.hp=storedHP;
+  throw error;
+ }finally{
+  battleActive=false;
+ }
+}
+function resolveBattle(f,isBoss,dungeon,selectedFoe){const foe=dungeon==='isekai'?takeIsekaiBoss(selectedFoe):dungeon==='forest'?forestMonster(f,isBoss):monster(f,isBoss);let hp=foe.hp,rounds=0,damage=0,heal=0,misses=0,dodges=0,surges=0,actions=[],turnLogs=[],failed=false;const skillUses={},magicUses={};let beerUsed=false,beerActive=false,wallHp=0,berserk=false,paralyzeTurns=0,guaranteedBossHit=false,timedOut=false,reraiseReady=false,reraiseUsed=false,gamblerStack=1;
+ let ninjaCounterTurn=0;
  // Debuffs only exist inside this single encounter, never persist to the next boss.
  const isekaiStatus={};let currentStatus={},enemyRageTurns=0,enemyRageMult=1;
- const resistAilment=(type)=>{
+ const masteredJob=isJobMaster(state.activeJob);
+ const healerRecoveryMultiplier=state.activeJob==='healer'?1.25:1;
+ let heroRecoveryUsed=false,grandmasterResistanceUsed=false;
+ const resistAilment=(type,message)=>{
   const rate=state.activeJob==='floraflulu'?1:effectResistance(type);
-  if(rate>0&&rand()<rate){recordMessage('【耐性発動】'+(ISEKAI_STATUS_NAMES[type]||'麻痺')+'を防いだ（'+Math.round(rate*100)+'%）');return true;}
+  if(rate>0&&rand()<rate){recordMessage(message||'【耐性発動】'+(ISEKAI_STATUS_NAMES[type]||'麻痺')+'を防いだ（'+Math.round(rate*100)+'%）');return true;}
+  if(state.activeJob==='grandmaster'&&masteredJob&&!grandmasterResistanceUsed){
+   grandmasterResistanceUsed=true;
+   recordMessage('【グランドマスター】'+(ISEKAI_STATUS_NAMES[type]||'麻痺')+'を防いだ（戦闘中1回）');
+   return true;
+  }
   return false;
  };
  let recordMessage=()=>{};
@@ -1119,13 +1170,16 @@ function fightOne(f,isBoss=false,dungeon='main',selectedFoe=null){const foe=dung
   const cast=stunned||currentStatus.magicSeal?null:rollMagicTurn(beerUsed,d.luk,{hasStatus:Object.keys(currentStatus).some(k=>currentStatus[k]),reraiseUsed});
   if(currentStatus.magicSeal)record('【魔法封印】このターンの魔法発動抽選なし');
   if(cast){
-   cast.uses--;magicUses[cast.name]=(magicUses[cast.name]||0)+1;
+   if(battleActive&&state.activeJob==='court_mage'&&rand()<(masteredJob ? .25 : .15)){
+    record('【宮廷魔術師】'+cast.name+'の使用回数を消費しなかった');
+   }else cast.uses--;
+   magicUses[cast.name]=(magicUses[cast.name]||0)+1;
    if(cast.key==='fire'){
     if(foe.passiveCat&&rand()*100>=PEELUNA_HIT_RATE){record('T'+rounds+'【ファイアー】ぴーるなはひらりとかわした（残'+cast.uses+'回）');}
      else {const amount=state.activeJob==='sage'?1000:500,before=hp;hp=Math.max(0,hp-amount);
       record('T'+rounds+'【ファイアー】固定'+Math.min(before,amount)+'ダメージ（残'+cast.uses+'回）');}
    }else if(cast.key==='heal'){
-    const gained=recover(state.activeJob==='sage'?600:300);
+    const gained=recover((state.activeJob==='sage'?600:300)*healerRecoveryMultiplier);
     record('T'+rounds+'【ヒール】HP+'+gained+'（残'+cast.uses+'回）');
    }else if(cast.key==='beer'){
     beerUsed=true;beerActive=true;
@@ -1145,6 +1199,7 @@ function fightOne(f,isBoss=false,dungeon='main',selectedFoe=null){const foe=dung
    }
   }
   if(hp<=0)break;
+  let firstLandedHit=true;
   for(let a=0;a<attacks&&hp>0;a++){
    const darkSacrifice=state.activeJob==='dark_knight'&&rand()<.2;
    if(darkSacrifice){const loss=Math.floor(state.hp*.5);state.hp=Math.max(1,state.hp-loss);damage+=loss;record('【ダークナイト】現在HPの50%を代償に基本攻撃×20（HP−'+num(loss)+'）');}
@@ -1174,13 +1229,26 @@ function fightOne(f,isBoss=false,dungeon='main',selectedFoe=null){const foe=dung
    if(samuraiPower>1)hit=Math.round(hit*samuraiPower);
    const darkBoost=state.activeJob==='dark_knight'&&rand()<.30;
    if(darkBoost)hit=Math.round(hit*1.2);
+   let jobDamageMultiplier=1;
+   switch(state.activeJob){
+    case 'fighter':jobDamageMultiplier=1.10;break;
+    case 'spellblade':if(firstLandedHit&&cast)jobDamageMultiplier=masteredJob?1.40:1.25;break;
+    case 'sniper':if(firstLandedHit)jobDamageMultiplier=masteredJob?1.45:1.30;break;
+    case 'ninja':if(firstLandedHit&&rounds===ninjaCounterTurn)jobDamageMultiplier=masteredJob?1.45:1.30;break;
+    case 'assassin':if(hp<=foe.hp*.30)jobDamageMultiplier=masteredJob?1.40:1.25;break;
+    case 'berserker':if(state.hp<=d.maxHP*.50)jobDamageMultiplier=masteredJob?1.50:1.35;break;
+    case 'hero':if(isBoss)jobDamageMultiplier=1.35;break;
+    case 'grandmaster':jobDamageMultiplier=1.20;break;
+   }
+   firstLandedHit=false;
+   if(jobDamageMultiplier!==1)hit=Math.round(hit*jobDamageMultiplier);
    const dealt=Math.min(hp,hit);hp=Math.max(0,hp-hit);let extra='';
    if(state.activeJob==='dark_knight'&&rand()<.20)extra+=' / 暗黒吸収HP+'+recover(dealt);
-   if(sk?.effect?.type==='heal')extra=' / HP+'+recover(sk.effect.value);
+   if(sk?.effect?.type==='heal')extra=' / HP+'+recover(sk.effect.value*healerRecoveryMultiplier);
    if(sk?.effect?.type==='drain')extra=' / HP吸収+'+recover(dealt*sk.effect.value/100);
    if(sk?.effect?.type==='stun')stopped=true;
    if(sk?.effect?.type==='guard')guard=Math.max(guard,sk.effect.value);
-   record('T'+rounds+' '+(sk?'【'+sk.name+'】':'通常攻撃')+(surged?'［魔力暴走×'+(master?.id==='archmage-peak'?4:master?.id==='arcane-peak'?3.5:2.5)+'］':'')+(masteryStrike?'［極撃×'+(weaponTier*5)+'］':'')+(warriorBoost?'［不屈の闘志×1.25］':'')+(archerBoost?'［'+(master?.id==='eagle-eye'?'鷹の眼×2.5':'弱点看破×2')+'］':'')+(advancedAttackBoost?'［'+master.name+'×1.2］':'')+(state.activeJob==='weapon_master'?'［武器の極致×2］':'')+(samuraiPower>1?'［武士×'+samuraiPower+'］':'')+(darkBoost?'［暗黒攻撃×1.2］':'')+(currentStatus.weaken?'［弱体化×0.55］':'')+' '+num(hit)+'ダメージ'+extra);
+   record('T'+rounds+' '+(sk?'【'+sk.name+'】':'通常攻撃')+(surged?'［魔力暴走×'+(master?.id==='archmage-peak'?4:master?.id==='arcane-peak'?3.5:2.5)+'］':'')+(masteryStrike?'［極撃×'+(weaponTier*5)+'］':'')+(warriorBoost?'［不屈の闘志×1.25］':'')+(archerBoost?'［'+(master?.id==='eagle-eye'?'鷹の眼×2.5':'弱点看破×2')+'］':'')+(advancedAttackBoost?'［'+master.name+'×1.2］':'')+(state.activeJob==='weapon_master'?'［武器の極致×2］':'')+(samuraiPower>1?'［武士×'+samuraiPower+'］':'')+(darkBoost?'［暗黒攻撃×1.2］':'')+(currentStatus.weaken?'［弱体化×0.55］':'')+(jobDamageMultiplier!==1?'［職業補正×'+jobDamageMultiplier+'］':'')+' '+num(hit)+'ダメージ'+extra);
   }
   if(hp<=0)break;
   if(foe.passiveCat){
@@ -1198,8 +1266,7 @@ function fightOne(f,isBoss=false,dungeon='main',selectedFoe=null){const foe=dung
   const paralysisTriggered=isFinalBoss&&rand()<FINAL_BOSS_PARALYSIS_RATE;let paralysisApplied=false;
   const desperate=isFinalBoss&&rand()<FINAL_BOSS_DESPERATE_RATE;
   if(paralysisTriggered){
-   if(resistAilment('paralysis'))record('【原初王の麻痺】装備耐性で無効化');
-   else {paralysisApplied=true;paralyzeTurns=1;guaranteedBossHit=true;record('【原初王の麻痺】次の1ターンは行動不能・ボスの次の攻撃は必中');}
+   if(!resistAilment('paralysis','【原初王の麻痺】耐性で無効化')){paralysisApplied=true;paralyzeTurns=1;guaranteedBossHit=true;record('【原初王の麻痺】次の1ターンは行動不能・ボスの次の攻撃は必中');}
   }
   if(paralysisApplied&&!desperate)continue;
   if(desperate)record('【原初の壊撃】命中率10%・ダメージ×10'+(guaranteedBossHit?'（麻痺により必中）':''));
@@ -1247,12 +1314,21 @@ function fightOne(f,isBoss=false,dungeon='main',selectedFoe=null){const foe=dung
    if(failed)break;
   }
   const d2=derived();
-  const hitRate=guaranteedBossHit?100:isekaiAccuracyOverride??(desperate?FINAL_BOSS_DESPERATE_ACCURACY:accuracy(foe.dex,d2.agi,foe.luk,d2.luk));
+  const normalEnemyAttack=!guaranteedBossHit&&isekaiAccuracyOverride===null&&!desperate;
+  const hitRate=guaranteedBossHit?100:isekaiAccuracyOverride??(desperate?FINAL_BOSS_DESPERATE_ACCURACY:
+   accuracy(foe.dex,d2.agi,foe.luk,d2.luk)-(state.activeJob==='thief'?5:0));
   guaranteedBossHit=false; // Always consumed by the NEXT attack attempt, whether hit or miss.
-  if(rand()*100>=hitRate){dodges++;record('敵の攻撃を回避！'+(desperate?'（原初の壊撃）':''));continue;}
+  if(rand()*100>=hitRate){
+   if(normalEnemyAttack&&state.activeJob==='ninja')ninjaCounterTurn=rounds+1;
+   dodges++;record('敵の攻撃を回避！'+(desperate?'（原初の壊撃）':''));continue;
+  }
   if(state.activeJob==='guardian'&&rand()<.30){record('【ガーディアン】敵の攻撃を無効化（30%）');continue;}
   let enemyHit=Math.max(1,Math.round(Math.max(1,4+foe.str*1.35+(dungeon==='forest'?f*3:f*2)-d2.baseDefense*(currentStatus.armorBreak?.25:1))*(.90+rand()*.20)));
-  if(guard)enemyHit=Math.max(1,Math.ceil(enemyHit*(1-guard/100)));
+  if(guard){
+   const guardBonus=state.activeJob==='general'?(masteredJob?10:5):0;
+   if(guardBonus)record('【ジェネラル】ガード+'+guardBonus+'ポイント');
+   enemyHit=Math.max(1,Math.ceil(enemyHit*(1-Math.min(100,guard+guardBonus)/100)));
+  }
   // Defensive passives reduce damage before the Wall absorbs it.
   if(state.activeJob==='knight')enemyHit=Math.max(1,Math.ceil(enemyHit*.90));
   if(state.activeJob==='heavy_knight')enemyHit=Math.max(1,Math.ceil(enemyHit*.80));
@@ -1267,15 +1343,26 @@ function fightOne(f,isBoss=false,dungeon='main',selectedFoe=null){const foe=dung
    if(isekaiAttackBoost!==1)enemyHit=Math.max(1,Math.round(enemyHit*isekaiAttackBoost));
    if(currentStatus.frail)enemyHit=Math.max(1,Math.round(enemyHit*1.5));
   }
+  const incomingPercent=state.activeJob==='hero'?85:state.activeJob==='grandmaster'?80:
+   state.activeJob==='berserker'&&state.hp<=d2.maxHP*.5?110:100;
+  if(incomingPercent!==100)enemyHit=Math.max(1,Math.ceil(enemyHit*incomingPercent/100));
   const shieldAbsorbed=Math.min(wallHp,enemyHit);wallHp-=shieldAbsorbed;
   const healthDamage=enemyHit-shieldAbsorbed;
   state.hp-=healthDamage;damage+=healthDamage;
+  let passiveRecovery=0;
   if(state.hp<=0)recoverFromLethal('敵の攻撃');
+  else if(healthDamage>0){
+   if(state.activeJob==='paladin')passiveRecovery=recover(healthDamage*(masteredJob?25:15)/100);
+   if(state.activeJob==='hero'&&masteredJob&&!heroRecoveryUsed&&state.hp<=d2.maxHP*.35){
+    passiveRecovery=recover(d2.maxHP/10);
+    if(passiveRecovery>0)heroRecoveryUsed=true;
+   }
+  }
   if(isekaiLeech&&healthDamage>0){const gained=Math.min(foe.hp-hp,Math.ceil(healthDamage*isekaiLeech));hp+=gained;record('【生命吸収】ボスHP+'+num(gained));}
   const armor=equippedMastery('body'),armorTier=masteryTier(armor);
   const masteryHeal=state.hp>0&&armorTier>0&&rand()*100<masteryProcRate('body');
   const recovered=masteryHeal?recover(Math.ceil(derived().maxHP*armorTier*.10)):0;
-  record('敵の攻撃 '+num(enemyHit)+'ダメージ'+(desperate?'［原初の壊撃×10］':'')+(isekaiAttackBoost!==1?'［異世界大技×'+isekaiAttackBoost+'］':'')+(currentStatus.frail?'［脆弱×1.5］':'')+(currentStatus.armorBreak?'［防御破壊］':'')+(berserk?'［暴走×1.5］':'')+(state.activeJob==='knight'?'［守護−10%］':'')+(state.activeJob==='heavy_knight'?'［重装防御−20%］':'')+(knightMasterGuard?'［不落の構え−30%］':'')+(heavyKnightMasterGuard?'［金剛の守り−35%］':'')+(shieldAbsorbed?'［壁が'+num(shieldAbsorbed)+'吸収・残'+num(wallHp)+'］':'')+' / HP被害 '+num(healthDamage)+(masteryHeal?'［再生：HP+'+recovered+'］':''));
+  record('敵の攻撃 '+num(enemyHit)+'ダメージ'+(desperate?'［原初の壊撃×10］':'')+(isekaiAttackBoost!==1?'［異世界大技×'+isekaiAttackBoost+'］':'')+(currentStatus.frail?'［脆弱×1.5］':'')+(currentStatus.armorBreak?'［防御破壊］':'')+(berserk?'［暴走×1.5］':'')+(state.activeJob==='knight'?'［守護−10%］':'')+(state.activeJob==='heavy_knight'?'［重装防御−20%］':'')+(knightMasterGuard?'［不落の構え−30%］':'')+(heavyKnightMasterGuard?'［金剛の守り−35%］':'')+(incomingPercent!==100?'［'+jobs[state.activeJob].name+'×'+(incomingPercent/100)+'］':'')+(shieldAbsorbed?'［壁が'+num(shieldAbsorbed)+'吸収・残'+num(wallHp)+'］':'')+' / HP被害 '+num(healthDamage)+(passiveRecovery>0?'［'+jobs[state.activeJob].name+'：HP+'+num(passiveRecovery)+'］':'')+(masteryHeal?'［再生：HP+'+recovered+'］':''));
   if(state.hp<=0){failed=true;break;}
   }finally{if(turnInfo){turnInfo.playerHpAfter=state.hp;turnInfo.enemyHpAfter=hp;turnInfo.wallAfter=wallHp;}}
  }
@@ -1291,7 +1378,6 @@ function fightOne(f,isBoss=false,dungeon='main',selectedFoe=null){const foe=dung
  }
  if(failed){markCodexBattle(foe,dungeon,isBoss,'loss');state.deaths++;const loss=Math.floor(state.gold*.1);state.gold-=loss;
   if(dungeon==='forest')state.forest.floor=1;else if(dungeon==='main')state.floor=1;else if(dungeon==='isekai')state.isekai.losses++;
-  state.hp=Math.max(1,Math.ceil(derived().maxHP*.25));
   logEntry('敗北：'+foe.name,(dungeon==='forest'?'魔の森の入口':dungeon==='isekai'?'異世界の門':'拠点')+'へ救出。'+loss+'Gを失った。');
   return {name:foe.name,win:false,rounds,damage,heal,misses,dodges,surges,actions,turnLogs,skillUses,magicUses,masteryGains,exp:0,gold:0,ore:0};}
  state.wins++;
@@ -1333,7 +1419,7 @@ function autoSnapshot(a){return {
  target:a.target,completed:a.completed,retreatPercent:a.retreatPercent,stopAtMaster:a.stopAtMaster,
  bossAllowed:a.bossAllowed,stopOnPeeluna:a.stopOnPeeluna,magicDrops:a.magicDrops,magicFound:a.magicFound,rareEncounters:a.rareEncounters,exp:a.exp,gold:a.gold,ore:a.ore,levelUps:a.levelUps,jobUps:a.jobUps,
  masteryExp:a.masteryExp,magicUsed:a.magicUsed,startedAt:a.startedAt,
- lastHP:state.hp,maxHP:derived().maxHP
+ lastHP:currentHP(),maxHP:derived().maxHP
 };}
 function autoRunPanelHTML(dungeon){
  const running=autoSession?.running&&autoSession.dungeon===dungeon;
@@ -1348,7 +1434,7 @@ function autoRunPanelHTML(dungeon){
  <p class="intro">${running?'周回中。職業・装備は固定し、戦闘を1回ずつ処理中。':'現在：'+locationText+'。階層移動・自動宿屋・自動転職はしない。'}</p>
  ${running?`<div class="split"><strong id="auto-count">${num(session.completed)} / ${num(session.target)}戦</strong><span class="pill good" id="auto-status">周回中</span></div>
   <div class="auto-progress" aria-hidden="true"><span id="auto-bar" style="width:${session.completed/session.target*100}%"></span></div>
-  <div class="auto-metrics"><div class="metric"><b id="auto-exp">+${num(session.exp)}</b><small>獲得EXP</small></div><div class="metric"><b id="auto-gold">+${num(session.gold)} G</b><small>獲得G</small></div><div class="metric"><b id="auto-mastery">+${num(session.masteryExp)}</b><small>武器・胴 熟練EXP</small></div><div class="metric"><b id="auto-hp">${num(state.hp)} / ${num(derived().maxHP)}</b><small>現在HP</small></div>${dungeon==='isekai'?`<div class="metric"><b id="auto-drops">${num(session.magicDrops)} 個</b><small>魔法ドロップ</small></div>`:''}</div>
+  <div class="auto-metrics"><div class="metric"><b id="auto-exp">+${num(session.exp)}</b><small>獲得EXP</small></div><div class="metric"><b id="auto-gold">+${num(session.gold)} G</b><small>獲得G</small></div><div class="metric"><b id="auto-mastery">+${num(session.masteryExp)}</b><small>武器・胴 熟練EXP</small></div><div class="metric"><b id="auto-hp">${num(currentHP())} / ${num(derived().maxHP)}</b><small>現在HP</small></div>${dungeon==='isekai'?`<div class="metric"><b id="auto-drops">${num(session.magicDrops)} 個</b><small>魔法ドロップ</small></div>`:''}</div>
   <button class="btn danger" data-auto="stop" style="width:100%">■ 自動周回を停止</button>`:
   `<div class="auto-config"><label class="auto-field">周回数（最大1,000）<input id="autoMax" type="number" min="1" max="1000" step="1" value="1000" inputmode="numeric"></label><label class="auto-field">撤退HP（最大HPに対する%）<input id="autoRetreat" type="number" min="0" max="100" step="1" value="30" inputmode="numeric"></label></div>
   <label class="auto-check"><input type="checkbox" id="autoMaster" checked>ジョブLv.60になったら停止</label>
@@ -1362,7 +1448,7 @@ function autoRunPanelHTML(dungeon){
  </section>`;
 }
 function refreshAutoPanel(){const a=autoSession;if(!a?.running)return;
- const values={'auto-count':num(a.completed)+' / '+num(a.target)+'戦','auto-exp':'+'+num(a.exp),'auto-gold':'+'+num(a.gold)+' G','auto-mastery':'+'+num(a.masteryExp),'auto-hp':num(state.hp)+' / '+num(derived().maxHP),'auto-drops':num(a.magicDrops)+' 個'};
+ const values={'auto-count':num(a.completed)+' / '+num(a.target)+'戦','auto-exp':'+'+num(a.exp),'auto-gold':'+'+num(a.gold)+' G','auto-mastery':'+'+num(a.masteryExp),'auto-hp':num(currentHP())+' / '+num(derived().maxHP),'auto-drops':num(a.magicDrops)+' 個'};
  for(const [id,value] of Object.entries(values)){const el=document.getElementById(id);if(el)el.textContent=value;}
  const meter=document.getElementById('auto-bar');if(meter)meter.style.width=(a.completed/a.target*100)+'%';
 }
@@ -1375,7 +1461,7 @@ function finishAutoRun(reason){const a=autoSession;if(!a?.running)return;
 }
 function runAutoStep(){const a=autoSession;if(!a?.running)return;
  // Check again before scheduling a new fight, including browser lifecycle safety.
- if(state.hp<=derived().maxHP*a.retreatPercent/100){finishAutoRun('HP'+a.retreatPercent+'%以下で撤退');return;}
+ if(currentHP()<=derived().maxHP*a.retreatPercent/100){finishAutoRun('HP'+a.retreatPercent+'%以下で撤退');return;}
  if(a.stopAtMaster&&isJobMaster(a.job)){finishAutoRun('ジョブマスター到達');return;}
  if(a.completed>=a.target){finishAutoRun('周回数の上限に到達');return;}
  try{
@@ -1409,7 +1495,7 @@ function runAutoStep(){const a=autoSession;if(!a?.running)return;
   if(a.completed%AUTO_DRAW_EVERY===0){renderHero();refreshAutoPanel();}
   if(!result.win){finishAutoRun(result.retreated?'150ターン時間切れ・撤退':'敗北（即停止）');return;}
   if(a.stopAtMaster&&isJobMaster(a.job)){finishAutoRun('ジョブマスター到達');return;}
-  if(state.hp<=derived().maxHP*a.retreatPercent/100){finishAutoRun('HP'+a.retreatPercent+'%以下で撤退');return;}
+  if(currentHP()<=derived().maxHP*a.retreatPercent/100){finishAutoRun('HP'+a.retreatPercent+'%以下で撤退');return;}
   if(a.isBoss&&a.dungeon==='main'){finishAutoRun('通常迷宮のボス討伐（再戦不可）');return;}
   if(a.completed>=a.target){finishAutoRun('周回数の上限に到達');return;}
   a.timer=setTimeout(runAutoStep,AUTO_TICK_MS);
@@ -1427,7 +1513,7 @@ function startAutoRun(){
  const isBoss=dungeon==='isekai'?true:dungeon==='forest'?isForestBossFloor(floor):floor===5&&state.kills[5]>=floors[5].need&&!state.bossDefeated&&bossAllowed;
  if(isBoss&&!bossAllowed){toast('ボス戦を周回するにはボス許可を有効にしてください');return;}
  if(stopAtMaster&&isJobMaster(state.activeJob)){toast('現在のジョブはすでにMASTERです。停止設定を変更してください');return;}
- if(state.hp<=derived().maxHP*retreatPercent/100){toast('HPが撤退条件に達しています。回復してから開始してください');return;}
+ if(currentHP()<=derived().maxHP*retreatPercent/100){toast('HPが撤退条件に達しています。回復してから開始してください');return;}
  autoSession={running:true,dungeon,floor,isBoss,job:state.activeJob,target,completed:0,retreatPercent,stopAtMaster,bossAllowed,stopOnPeeluna,exp:0,gold:0,ore:0,levelUps:0,jobUps:0,masteryExp:0,magicUsed:0,magicDrops:0,magicFound:{},rareEncounters:0,startedAt:new Date().toISOString(),timer:null};
  state.autoRunProgress=autoSnapshot(autoSession);lastResult=null;save();render();
  autoSession.timer=setTimeout(runAutoStep,AUTO_TICK_MS);
@@ -1450,7 +1536,7 @@ function run(count,isBoss=false,dungeon='main'){
  if(!Number.isFinite(retreat)||retreat<0){toast('撤退HPは0以上');return;}
  const results=[];let exp=0,gold=0,ore=0,jobUps=0,levelUps=0,surges=0,misses=0,dodges=0,reason='周回完了';const masteryTotals={},magicTotals={};
  for(let i=0;i<count;i++){
-  if(state.hp<=retreat){reason='撤退条件に到達';break;}
+  if(currentHP()<=retreat){reason='撤退条件に到達';break;}
   const r=fightOne(floor,isBoss,dungeon);results.push(r);
   if(dungeon==='isekai'){
    const entry={id:state.battleCount,dungeon:'isekai',name:r.name,win:r.win,retreated:!!r.retreated,rounds:r.rounds,damage:r.damage,heal:r.heal,exp:r.exp,gold:r.gold,magicDrop:r.magicDrop||null,turns:r.turnLogs||[]};
@@ -1466,7 +1552,7 @@ function run(count,isBoss=false,dungeon='main'){
   for(const [name,n] of Object.entries(r.magicUses||{}))magicTotals[name]=(magicTotals[name]||0)+n;
   for(const g of r.masteryGains||[]){const k=g.id;if(!masteryTotals[k])masteryTotals[k]={name:g.name,exp:0,levels:0};masteryTotals[k].exp+=g.exp;masteryTotals[k].levels+=g.levels;}
   if(!r.win){reason=r.retreated?'150ターン経過・撤退':'敗北・拠点へ帰還';break;}
-  if(state.hp<=retreat){reason='HPが撤退ライン以下';break;}
+  if(currentHP()<=retreat){reason='HPが撤退ライン以下';break;}
  }
  if(!results.length)reason='戦闘前に撤退条件に到達';
  lastResult={results,exp,gold,ore,jobUps,levelUps,surges,misses,dodges,reason,dungeon,masteryTotals:Object.values(masteryTotals),magicTotals};save();render();
@@ -1573,11 +1659,11 @@ function forestHTML(){
  <p class="hint">ボスごとに「アイテム」「魔法」のドロップテーブルを定義済み。中身は未設定で、素材・魔法の実ドロップや武具合成は今後実装する。</p>
  </section>${autoRunPanelHTML('forest')}${resultHTML()}${forestRecordsHTML()}`;
 }
-function renderHero(){const d=derived(),p=state.jobProgress[state.activeJob],max=expNeed(state.level);
+function renderHero(){const d=derived(),hp=currentHP(d),p=state.jobProgress[state.activeJob],max=expNeed(state.level);
  const expanded=!!document.getElementById('heroDetails')?.open;
- $('#hero').innerHTML=`<div class="herohead"><div class="hero-main"><div class="job">${jobs[state.activeJob].eng} · JOB Lv.${p.level}/${JOB_CAP}</div><h2>名もなき${jobs[state.activeJob].name}</h2><div class="hero-summary">総合Lv.${num(state.level)} · ${jobs[state.activeJob].mode==='magic'?'魔法攻撃':'物理攻撃'}</div></div><div class="hero-hp"><strong>HP ${num(state.hp)} / ${num(d.maxHP)}</strong><div class="track"><div class="fill hp ${state.hp/d.maxHP<.33?'low':''}" style="width:${clamp(state.hp/d.maxHP*100,0,100)}%"></div></div></div></div>
+ $('#hero').innerHTML=`<div class="herohead"><div class="hero-main"><div class="job">${jobs[state.activeJob].eng} · JOB Lv.${p.level}/${JOB_CAP}</div><h2>名もなき${jobs[state.activeJob].name}</h2><div class="hero-summary">総合Lv.${num(state.level)} · ${jobs[state.activeJob].mode==='magic'?'魔法攻撃':'物理攻撃'}</div></div><div class="hero-hp"><strong>HP ${num(hp)} / ${num(d.maxHP)}</strong><div class="track"><div class="fill hp ${hp/d.maxHP<.33?'low':''}" style="width:${clamp(hp/d.maxHP*100,0,100)}%"></div></div></div></div>
  <details id="heroDetails" class="hero-details" ${expanded?'open':''}><summary>能力値・経験値の詳細</summary><div class="bars"><div><div class="barline"><span>総合EXP</span><strong>${num(state.xp)} / ${num(max)}</strong></div><div class="track"><div class="fill xp" style="width:${clamp(state.xp/max*100,0,100)}%"></div></div></div><div><div class="barline"><span>ジョブEXP</span><strong>${p.level>=JOB_CAP?'MAX':num(p.xp)+' / '+num(expNeed(p.level))}</strong></div><div class="track"><div class="fill jobxp" style="width:${p.level>=JOB_CAP?100:clamp(p.xp/expNeed(p.level)*100,0,100)}%"></div></div></div></div>
- <div class="statgrid six">${attrs.map(a=>`<div class="stat"><span>${attrLabels[a]}</span><strong>${num(d[a])}</strong></div>`).join('')}</div><div class="info" style="margin-top:10px"><span class="pill gold">装備攻撃 ${num(d.baseAttack)}</span><span class="pill blue">装備防御 ${num(d.baseDefense)}</span><span class="pill">熟練技 ${masteryProcRate()}%</span></div>
+ <div class="statgrid six">${attrs.map(a=>`<div class="stat"><span>${attrLabels[a]}</span><strong>${num(d[a])}</strong></div>`).join('')}</div><div class="info" style="margin-top:10px"><span class="pill gold">装備攻撃 ${num(d.baseAttack)}</span><span class="pill blue">装備防御 ${num(d.baseDefense)}</span><span class="pill">熟練技 ${masteryProcRate()}%</span>${state.level>=GROWTH_POINT_START_LEVEL-1||state.growthPoints>0?`<span class="pill gold">育成ポイント ${num(state.growthPoints)}</span>`:''}</div>
  <div class="hint" style="margin-top:10px">命中 ${accuracy(d.dex,8,d.luk,8).toFixed(1)}% / 回避 ${(100-accuracy(8,d.agi,8,d.luk)).toFixed(1)}%（基準値8の相手） · 1ターン ${jobActionsPerTurn(d.agi)}回行動</div></details>`;
  $('#locationBadge').textContent=state.location==='casino'?'カジノ島':state.location==='isekai'?'異世界':state.location==='forest'?'魔の森・'+state.forest.floor+'階':'第'+state.floor+'層';$('#goldBadge').textContent=num(state.gold)+' G'+(state.location==='casino'?' / '+num(state.medals)+' M':'');
 }
@@ -1646,36 +1732,31 @@ function magicShopHTML(){
 function townHTML(){return `<section class="panel"><h2 class="sectiontitle">拠点の施設</h2><div class="island-gate"><div><strong>⛵ カジノ島への航路</strong><p class="small muted">ゴールドをメダルに換えて遊ぶ娯楽の島。景品交換所には強力な武器も。</p></div><button class="btn gold" data-travel="casino">カジノ島へ渡る</button></div><div class="island-gate"><div><strong>✦ 異世界への門</strong><p class="small muted">通常ボス25体と、出現率0.01%の『異世界に迷い込んだぴーるな』。勝利時は1%で魔法が落ちる。</p></div><button class="btn gold" data-travel="isekai">異世界へ挑む</button></div><div class="island-gate"><div><strong>🌲 魔の森への道</strong><p class="small muted">全50階、10階ごとにボス。進行度は通常迷宮と独立。将来は素材・魔法を掘る場所になる。</p></div><button class="btn primary" data-travel="forest">魔の森へ向かう</button></div><div class="shopnav">${[['weapon','武器屋'],['armor','防具屋'],['accessory','アクセサリー店'],['magic','魔法店'],['services','宿屋・鍛冶屋']].map(([k,n])=>`<button class="btn ${townSection===k?'primary':''}" data-town="${k}">${n}</button>`).join('')}</div></section>${townSection==='magic'?magicShopHTML():townSection==='services'?servicesHTML():shopHTML(townSection)}`;}
 function jobCardHTML(j){
  const p=state.jobProgress[j],selected=j===state.activeJob,readonly=state.location!=='main',req=jobRequirements[j]||{masterJobs:[]};
- const missing=(req.masterJobs||[]).filter(x=>!isJobMaster(x));
- const missingLv=Math.max(0,(req.minLevel||1)-state.level),locked=!canChangeJob(j);
- const gate=req.minLevel?'総合Lv.'+num(req.minLevel)+'以上 ＋ 全'+req.masterJobs.length+'職MASTER':req.masterJobs.length?req.masterJobs.map(k=>jobs[k].name+'MASTER').join(' ＋ '):'条件なし';
- const gateDetail=req.minLevel?`<details class="skilldetails"><summary>必要なMASTER ${req.masterJobs.length-missing.length}/${req.masterJobs.length}（${missing.length}職不足）</summary><div class="tiny muted">${esc(req.masterJobs.map(k=>jobs[k].name+(isJobMaster(k)?' ✓':' 未')).join(' ／ '))}</div></details>`:'';
+ const locked=!canChangeJob(j),gate=req.masterJobs.map(k=>jobs[k].name+'MASTER').join(' ＋ ');
  const skillSet=skills[j]||[],passive=masterPassiveDefinitions[j];
+ const ordinaryPassives=[jobs[j].passive].flat();
  return `<div class="jobcard ${selected?'active':''} ${locked?'locked':''}"><div class="split"><h3>${esc(jobs[j].name)}</h3><span class="pill ${p.level>=JOB_MASTER_LEVEL?'gold':selected?'good':''}">${p.level>=JOB_MASTER_LEVEL?'★ MASTER':selected?'現在のジョブ':'Lv.'+p.level}</span></div>
- ${req.masterJobs.length||req.minLevel?`<div class="tiny ${locked?'error':'ok'}">${locked?'🔒 未解放':'✓ 転職可能'} · ${esc(gate)}${missingLv?`（総合Lvあと${num(missingLv)}）`:''}</div>${gateDetail}`:''}
+ ${gate?`<div class="tiny ${locked?'error':'ok'}">${locked?'🔒 未解放':'✓ 転職可能'} · ${esc(gate)}</div>`:''}
  <p>${esc(jobs[j].desc)}</p><div class="small">ジョブLv ${p.level}/${JOB_CAP} · ${p.level===JOB_CAP?'MAX':'次まで '+num(expNeed(p.level)-p.xp)+' EXP'}</div><div class="progressline"><span style="width:${p.level===JOB_CAP?100:p.xp/expNeed(p.level)*100}%"></span></div>
  <button class="btn ${selected||locked?'':'primary'}" data-job="${j}" ${selected||locked||readonly?'disabled':''}>${selected?'選択中':locked?'転職条件未達':readonly?'拠点で転職':'転職する'}</button>
- <div class="small muted">固有効果：${esc(jobs[j].passive)}</div>
- ${passive?`<div class="masterypassive"><strong>${p.level>=JOB_MASTER_LEVEL?'★ マスター認定済み':'☆ マスター未到達（Lv.60）'}</strong><span>MASTER効果：${esc(passive.name)}（${esc(passive.desc)}）${selected&&p.level>=JOB_MASTER_LEVEL?'【発動中】':''}</span></div>`:`<div class="masterypassive"><strong>${p.level>=JOB_MASTER_LEVEL?'★ MASTER認定済み':'☆ Lv.60でMASTER'}</strong><span>${jobs[j].tier==='upper'?'固有効果は転職直後から有効。ジョブスキルは今後設計する':'MASTER専用の追加効果は未設定（今後の設計項目）'}</span></div>`}
- ${skillSet.length?`<details class="skilldetails" ${selected?'open':''}><summary>スキル ${skillSet.filter(s=>s.level<=p.level).length}/${skillSet.length}習得${['composite','special'].includes(jobs[j].tier)?'（仮仕様）':''}</summary><div class="skilllist">${skillSet.map(skill=>`<div class="skillentry ${p.level<skill.level?'locked':''}"><div class="split"><strong>${esc(skill.name)}</strong><span class="pill">ジョブLv.${skill.level}</span></div><div class="small">威力×${skill.power.toFixed(2)} / 基礎発動率${skill.rate}%</div><div class="tiny muted">${effectText(skill.effect)}</div></div>`).join('')}</div></details>`:'<p class="hint">個別スキルは未設計（上級職は職業データと固有効果を準備済み）</p>'}</div>`;
+ <div class="small muted">通常パッシブ ${ordinaryPassives.length}枠</div>${ordinaryPassives.map(description=>`<div class="small muted">${esc(description)}</div>`).join('')}
+ ${passive?`<div class="masterypassive"><strong>${p.level>=JOB_MASTER_LEVEL?'★ マスター認定済み':'☆ マスター未到達（Lv.60）'}</strong><span>MASTER効果：${esc(passive.name)}（${esc(passive.desc)}）${selected&&p.level>=JOB_MASTER_LEVEL?'【発動中】':''}</span></div>`:`<div class="masterypassive"><strong>${p.level>=JOB_MASTER_LEVEL?'★ MASTER認定済み':'☆ Lv.60でMASTER'}</strong><span>MASTER専用の追加効果は未設定（今後の設計項目）</span></div>`}
+ ${skillSet.length?`<details class="skilldetails" ${selected?'open':''}><summary>スキル ${skillSet.filter(s=>s.level<=p.level).length}/${skillSet.length}習得${['composite','special'].includes(jobs[j].tier)?'（仮仕様）':''}</summary><div class="skilllist">${skillSet.map(skill=>`<div class="skillentry ${p.level<skill.level?'locked':''}"><div class="split"><strong>${esc(skill.name)}</strong><span class="pill">ジョブLv.${skill.level}</span></div><div class="small">威力×${skill.power.toFixed(2)} / 基礎発動率${skill.rate}%</div><div class="tiny muted">${effectText(skill.effect)}</div></div>`).join('')}</div></details>`:'<p class="hint">個別スキルは未設計</p>'}</div>`;
 }
 function jobsHTML(){
  const lower=basicJobKeys.map(jobCardHTML).join('');
  const mid=intermediateJobKeys.map(jobCardHTML).join('');
  const comp=compositeJobKeys.map(jobCardHTML).join('');
  const gm=specialJobKeys.map(jobCardHTML).join('');
- const upper=upperJobKeys.map(jobCardHTML).join('');
- const allBaseDone=nonUpperJobKeys.every(isJobMaster);
  return `<section class="panel"><div class="kicker">ADVENTURER GUILD</div><h2 class="sectiontitle">ジョブ・転職</h2>
- <p class="intro">下級6職 → 中級7職 → 複合9職 → グランドマスター → 上級8職。どの職もLv.60でMASTER。上級は総合Lv.100,000と上級以外の全23職MASTERが必要。転職時、永続能力値と装備は維持。</p>
+ <p class="intro">下級6職 → 中級7職 → 複合9職 → グランドマスター。各職はジョブLv.60でMASTER。転職時、永続能力値と装備は維持。</p>
  ${state.location!=='main'?'<div class="notice ui-access-note">ダンジョンでは閲覧のみ。転職は拠点で行ってください。</div>':''}
- <div class="info"><span class="pill gold">MASTER ${jobMasterCount()} / ${jobKeys.length}職</span><span class="pill blue">上級解放条件 ${nonUpperJobKeys.filter(isJobMaster).length}/${nonUpperJobKeys.length}職MASTER</span><span class="pill">総合Lv.${num(state.level)} / ${num(UPPER_UNLOCK_LEVEL)}</span></div>
+ <div class="info"><span class="pill gold">MASTER ${nonUpperJobKeys.filter(isJobMaster).length} / ${nonUpperJobKeys.length}職</span></div>
  <details class="job-group-details" open><summary>下級職（6職）</summary><div class="jobcards">${lower}</div></details>
  <details id="advancedJobs" class="job-group-details" ${advancedJobsOpen||jobs[state.activeJob].tier==='intermediate'?'open':''}><summary>中級職（7職）</summary><div class="jobcards">${mid}</div></details>
  <details class="job-group-details" ${jobs[state.activeJob].tier==='composite'?'open':''}><summary>複合職（9職） · ${compositeJobKeys.filter(canChangeJob).length}職解放</summary><div class="jobcards">${comp}</div></details>
  <details class="job-group-details" ${state.activeJob==='grandmaster'?'open':''}><summary>特別職：グランドマスター</summary><div class="jobcards">${gm}</div></details>
- <details class="job-group-details" ${jobs[state.activeJob].tier==='upper'?'open':''}><summary>上級職（8職・将来設計枠）${allBaseDone?' 全職MASTER達成':''}</summary><p class="hint">上級職の固有能力は定義済み。個別スキルは今後決定。総合Lv.100,000かつ下級・中級・複合・グランドマスターの全23職MASTERが必要。</p><div class="jobcards">${upper}</div></details>
- <p class="hint">複合職のスキル・能力値成長は仮バランス。上級職「ギャンブラー」の精製成功率×2は精製システム実装後に連携する。</p></section>`;
+ <p class="hint">複合職のスキル・能力値成長は仮バランス。</p></section>`;
 }
 function codexSpecialText(s){
  const name=ISEKAI_STATUS_NAMES[s.type]||ISEKAI_EFFECT_NAMES[s.type]||s.type;
