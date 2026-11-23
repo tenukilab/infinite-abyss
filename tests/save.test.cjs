@@ -1225,3 +1225,69 @@ test('weighted drop rewards persist in inventory, battle records and both codex 
     });
   }
 });
+
+test('auto-run Gold goals measure this run, and keep the battle that reaches the goal', () => {
+  const save = autoRunSave();
+  save.gold = 1_000_000;
+  const game = bootSaved(save);
+  configureAutoRun(game, 10);
+  game.setInput('#autoGoldGoal', '20');
+  game.click({ auto: 'start' });
+
+  game.stepAutoRun();
+  const first = game.state();
+  assert.equal(first.battleCount, 1);
+  assert.ok(first.autoRunProgress.gold < 20);
+
+  while (game.state().autoRunProgress) game.stepAutoRun();
+  const progress = boot(game.storage).state();
+  assert.ok(progress.battleCount < 10);
+  assert.ok(progress.lastAutoRun.gold >= 20);
+  assert.equal(progress.gold, save.gold + progress.lastAutoRun.gold);
+  assert.equal(progress.lastAutoRun.reason, '獲得Gの目標に到達（20G）');
+});
+
+test('auto-run mastery goals count both equipped items and allow a second target', () => {
+  const save = autoRunSave();
+  save.inventory = [
+    { id: 'test-weapon', name: 'Test weapon', slot: 'weapon', stat: {} },
+    { id: 'test-body', name: 'Test body', slot: 'body', stat: {} },
+  ];
+  Object.assign(save.equipped, { weapon: 'test-weapon', body: 'test-body' });
+  const game = bootSaved(save);
+  configureAutoRun(game);
+  game.setInput('#autoGoldGoal', '99999');
+  game.setInput('#autoMasteryGoal', '2');
+  game.click({ auto: 'start' });
+  game.stepAutoRun();
+  game.stepAutoRun();
+  const progress = boot(game.storage).state();
+  assert.equal(progress.battleCount, 1);
+  assert.ok(progress.inventory.every(item => item.masteryXp >= 1));
+  assert.equal(progress.lastAutoRun.masteryExp, progress.inventory.reduce((sum, item) => sum + item.masteryXp, 0));
+  assert.equal(progress.lastAutoRun.reason, '熟練EXPの目標に到達（2）');
+});
+
+test('auto-run rejects invalid goals and mastery goals with no growable gear', async t => {
+  await t.test('non-integer, negative or unsafe Gold targets', () => {
+    const game = boot();
+    configureAutoRun(game);
+    for (const value of ['2.5', '-10', '9007199254740992']) {
+      game.setInput('#autoGoldGoal', value);
+      game.click({ auto: 'start' });
+      assert.match(game.toast(), /停止目標/);
+      assert.equal(game.state().autoRunProgress, null);
+    }
+  });
+  await t.test('all equipped gear is capped', () => {
+    const save = autoRunSave();
+    save.inventory = [{ id: 'test-weapon', name: 'Test weapon', slot: 'weapon', stat: {}, maxMastery: 1, mastery: 1 }];
+    save.equipped.weapon = 'test-weapon';
+    const game = bootSaved(save);
+    configureAutoRun(game);
+    game.setInput('#autoMasteryGoal', '1');
+    game.click({ auto: 'start' });
+    assert.match(game.toast(), /成長できる/);
+    assert.equal(game.state().autoRunProgress, null);
+  });
+});

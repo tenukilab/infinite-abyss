@@ -1461,6 +1461,7 @@ function autoRunPanelHTML(dungeon){
  const rareText=dungeon==='isekai'&&pendingIsekaiBoss()?.passiveCat?'現在「異世界に迷い込んだぴーるな」と遭遇中。手動で挑戦するか、「ぴーるな遭遇時停止」をOFFにして周回を開始できます。':'';
  return `<section class="panel auto-panel" id="auto-run-panel"><div class="kicker">AUTO EXPEDITION</div><h3 class="sectiontitle">⚙ 自動周回</h3>
  <p class="intro">${running?'周回中。職業・装備は固定し、戦闘を1回ずつ処理中。':'現在：'+locationText+'。階層移動・自動宿屋・自動転職はしない。'}</p>
+ ${running&&(session.goldGoal||session.masteryGoal)?`<p class="small muted">停止目標：${[session.goldGoal&&'獲得G '+num(session.goldGoal)+'G',session.masteryGoal&&'熟練EXP '+num(session.masteryGoal)].filter(Boolean).join(' / ')}</p>`:''}
  ${running?`<div class="split"><strong id="auto-count">${num(session.completed)} / ${num(session.target)}戦</strong><span class="pill good" id="auto-status">周回中</span></div>
   <div class="auto-progress" aria-hidden="true"><span id="auto-bar" style="width:${session.completed/session.target*100}%"></span></div>
   <div class="auto-metrics"><div class="metric"><b id="auto-exp">+${num(session.exp)}</b><small>獲得EXP</small></div><div class="metric"><b id="auto-gold">+${num(session.gold)} G</b><small>獲得G</small></div><div class="metric"><b id="auto-mastery">+${num(session.masteryExp)}</b><small>武器・胴 熟練EXP</small></div><div class="metric"><b id="auto-hp">${num(currentHP())} / ${num(derived().maxHP)}</b><small>現在HP</small></div>${dungeon==='isekai'?`<div class="metric"><b id="auto-drops">${num(session.magicDrops)} 個</b><small>魔法ドロップ</small></div>`:''}</div>
@@ -1470,6 +1471,14 @@ function autoRunPanelHTML(dungeon){
   <label class="auto-check"><input type="checkbox" id="autoDefeat" checked disabled>敗北・150ターン時間切れで停止（固定）</label>
   <label class="auto-check"><input type="checkbox" id="autoBoss" checked>ボスの再戦周回を許可</label>
   ${dungeon==='isekai'?`<label class="auto-check"><input type="checkbox" id="autoPeeluna" checked>ぴーるな遭遇時に停止（遭遇を保存して手動挑戦できる）</label>`:''}
+  <details>
+   <summary class="small muted">獲得G・熟練EXPで停止</summary>
+   <p class="hint">今回の周回で先に達した目標で停止します。空欄または0は無効です。</p>
+   <div class="auto-config">
+    <label class="auto-field">獲得Gの目標<input id="autoGoldGoal" type="number" min="0" step="1" inputmode="numeric"></label>
+    <label class="auto-field">武器・胴の熟練EXP合計の目標<input id="autoMasteryGoal" type="number" min="0" step="1" inputmode="numeric"></label>
+   </div>
+  </details>
   ${rareText?`<div class="notice" style="margin-top:10px">${esc(rareText)}</div>`:''}
   <p class="hint">${dungeon==='isekai'?'異世界は毎戦ボスを再抽選。通常25体と0.01%のぴーるな。勝利時の'+isekaiMagicDropDescription:isBoss?'この階ではボス戦を周回。通常迷宮のボスは再戦できないため、討伐後に停止。':'通常の敵と戦闘。'} 150ターン撤退・保存エラーで停止。iPhoneの画面を閉じている間は進みません。</p>
   <button class="btn primary" data-auto="start" style="width:100%">▶ 自動周回を開始</button>`}
@@ -1527,6 +1536,8 @@ function runAutoStep(){const a=autoSession;if(!a?.running)return;
   if(a.stopAtMaster&&isJobMaster(a.job)){finishAutoRun('ジョブマスター到達');return;}
   if(currentHP()<=derived().maxHP*a.retreatPercent/100){finishAutoRun('HP'+a.retreatPercent+'%以下で撤退');return;}
   if(a.isBoss&&a.dungeon==='main'){finishAutoRun('通常迷宮のボス討伐（再戦不可）');return;}
+  if(a.goldGoal&&a.gold>=a.goldGoal){finishAutoRun('獲得Gの目標に到達（'+num(a.goldGoal)+'G）');return;}
+  if(a.masteryGoal&&a.masteryExp>=a.masteryGoal){finishAutoRun('熟練EXPの目標に到達（'+num(a.masteryGoal)+'）');return;}
   if(a.completed>=a.target){finishAutoRun('周回数の上限に到達');return;}
   a.timer=setTimeout(runAutoStep,AUTO_TICK_MS);
  }catch(err){console.error('auto expedition error',err);finishAutoRun('処理エラーで停止');}
@@ -1539,13 +1550,21 @@ function startAutoRun(){
  const target=Number($('#autoMax')?.value),retreatPercent=Number($('#autoRetreat')?.value);
  if(!Number.isInteger(target)||target<1||target>AUTO_LIMIT){toast('周回数は1～1000戦で指定してください');return;}
  if(!Number.isInteger(retreatPercent)||retreatPercent<0||retreatPercent>100){toast('撤退HPは0～100%で指定してください');return;}
+ const goldGoal=Number($('#autoGoldGoal')?.value??''),masteryGoal=Number($('#autoMasteryGoal')?.value??'');
+ if(!isCount(goldGoal)||!isCount(masteryGoal)){toast('停止目標は0以上の整数で指定してください');return;}
+ if(masteryGoal&&!MASTERY_SLOTS.some(slot=>{
+  const item=equippedMastery(slot);
+  return item&&item.mastery<item.maxMastery;
+ })){
+  toast('熟練EXPを目標にするには成長できる武器か胴装備が必要です');return;
+ }
  const stopAtMaster=!!$('#autoMaster')?.checked,bossAllowed=!!$('#autoBoss')?.checked,stopOnPeeluna=dungeon==='isekai'&&!!$('#autoPeeluna')?.checked;
  const floor=dungeon==='isekai'?0:dungeon==='forest'?state.forest.floor:state.floor;
  const isBoss=dungeon==='isekai'?true:dungeon==='forest'?isForestBossFloor(floor):floor===5&&state.kills[5]>=floors[5].need&&!state.bossDefeated&&bossAllowed;
  if(isBoss&&!bossAllowed){toast('ボス戦を周回するにはボス許可を有効にしてください');return;}
  if(stopAtMaster&&isJobMaster(state.activeJob)){toast('現在のジョブはすでにMASTERです。停止設定を変更してください');return;}
  if(currentHP()<=derived().maxHP*retreatPercent/100){toast('HPが撤退条件に達しています。回復してから開始してください');return;}
- autoSession={running:true,dungeon,floor,isBoss,job:state.activeJob,target,completed:0,retreatPercent,stopAtMaster,bossAllowed,stopOnPeeluna,exp:0,gold:0,ore:0,levelUps:0,jobUps:0,masteryExp:0,magicUsed:0,magicDrops:0,magicFound:{},rareEncounters:0,startedAt:new Date().toISOString(),timer:null};
+ autoSession={running:true,dungeon,floor,isBoss,job:state.activeJob,target,completed:0,retreatPercent,stopAtMaster,goldGoal,masteryGoal,bossAllowed,stopOnPeeluna,exp:0,gold:0,ore:0,levelUps:0,jobUps:0,masteryExp:0,magicUsed:0,magicDrops:0,magicFound:{},rareEncounters:0,startedAt:new Date().toISOString(),timer:null};
  state.autoRunProgress=autoSnapshot(autoSession);
  if(!save()){
   autoSession=null;state.autoRunProgress=null;
