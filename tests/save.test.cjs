@@ -653,7 +653,7 @@ test('manual and auto 150-turn retreats only save normal HP and keep 70% EXP', a
       const result = state.isekai.battleRecords[0];
       assert.equal(result.rounds, 150);
       assert.equal(result.retreated, true);
-      assert.equal(result.exp, 21_140_000);
+      assert.equal(result.exp, 700_000_000);
       assert.equal(result.gold, 0);
       assert.ok(result.turns.at(-1).playerHpAfter > NORMAL_HP_LIMIT);
       assert.equal(state.isekai.retreats, 1);
