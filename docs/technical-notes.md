@@ -140,7 +140,7 @@
 | UI | iPhoneの画面幅で操作でき、ターン記録を開閉できる |
 | 図鑑 | 56種の未知表示と発見数、6魔法、異世界遭遇停止、通常/自動戦闘の戦績加算、再読込時の二重加算防止 |
 
-セーブの自動回帰テストはリポジトリのルートで `node --test` を実行する。[テスト](../tests/save.test.cjs) はDOMとブラウザの保存領域を代替し、[v0.18のテスト用データ](../tests/fixtures/save-v018.json) などで起動・再読み込み・JSON取り込みを確認する。実ブラウザの操作確認は別途行う。READMEのテスト実績は各リリース時の記録。
+回帰テストはリポジトリのルートでNode.js 24の `node --test` を実行する。 `main` 向けPRの作成・更新・再オープン時は [Regression tests ワークフロー](../.github/workflows/regression-tests.yml) が自動で実行し、PRのChecksから結果を確認できる。[テスト](../tests/save.test.cjs) はDOMとブラウザの保存領域を代替し、[v0.18のテスト用データ](../tests/fixtures/save-v018.json) などで起動・再読み込み・JSON取り込みを確認する。実ブラウザの操作確認は別途行う。READMEのテスト実績は各リリース時の記録。
 
 ## 7. リリース手順
 
