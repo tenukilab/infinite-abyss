@@ -183,8 +183,9 @@ const STATUS_RESIST_ITEMS=[
 const STATUS_EFFECT_KEYS=['poison','bleed','blind','weaken','slow','healSeal','magicSeal','armorBreak','frail','paralysis'];
 const ISEKAI_STATUS_NAMES={poison:'猛毒',bleed:'出血',blind:'暗闇',weaken:'攻撃弱体',slow:'鈍足',healSeal:'回復封じ',magicSeal:'魔法封印',armorBreak:'防御破壊',frail:'脆弱'};
 const ISEKAI_EFFECT_NAMES={paralysis:'神経麻痺',heavy:'滅殺の一撃',regen:'異界再生',leech:'生命吸収',trueStrike:'魂への直撃',wallCrush:'結界破砕',siphon:'魔法搾取',fury:'異界の怒り'};
-// Rarity is intentionally unassigned today. Uniform selection comes AFTER the 1% success roll.
-// Future rarity weights must be applied only to selection, never to the 1% acquisition roll.
+// Experiment: switch off to restore the original uniform pool without migrating saves.
+const EXPERIMENT_WEIGHTED_ISEKAI_MAGIC_DROPS=true;
+const ISEKAI_MAGIC_RARITY_WEIGHTS={common:21,uncommon:17,rare:12,'very-rare':8};
 const ISEKAI_MAGIC_DROP_POOL=()=>MAGIC_CATALOG.filter(m=>m.kind==='spell');
 const isForestBossFloor=f=>Number.isInteger(f)&&f>=10&&f<=FOREST_MAX_FLOOR&&f%10===0;
 // Mastery is per equipment item, not per slot. EXP needed per mastery level never grows.
@@ -195,12 +196,12 @@ const MASTERY_SLOTS=['weapon','body'];
 // Magic charges are independent from weapon mastery and from jobs.
 const MAGIC_SCHEMA=1, MAGIC_USES_MAX=5000, MAGIC_SHOP_RESTORE_CAP=3000, MAGIC_SHOP_MIN_USES=800;
 const MAGIC_CATALOG=[
- {key:'fire',name:'ファイアー',kind:'spell',dropRarity:'unset',price:3600,uses:3000,rate:20,effect:'固定500ダメージ',description:'敵に防御無視の固定500ダメージ。'},
- {key:'heal',name:'ヒール',kind:'spell',dropRarity:'unset',price:2500,uses:3000,rate:20,effect:'HP300回復',description:'自分のHPを最大300回復。'},
- {key:'beer',name:'ビール',kind:'spell',dropRarity:'unset',price:4200,uses:3000,rate:20,effect:'命中率半減・攻撃最終値×1.2',description:'1戦闘に1回だけ発動。その戦闘中は命中率が半分になり、通常攻撃・ジョブスキル・熟練技の最終ダメージが1.2倍。'},
- {key:'wall',name:'ウォール',kind:'spell',dropRarity:'unset',shop:false,price:null,uses:5000,rate:WALL_MAGIC_RATE,effect:'最大HP分の防御壁・最大HP×3まで重ねがけ',description:'発動時、最大HPと同量のダメージ吸収壁を張る。複数回発動で最大HPの3倍まで蓄積。戦闘が終わると消える。将来のドロップ専用魔法。'},
- {key:'cure',name:'キュア',kind:'spell',dropRarity:'unset',price:6000,uses:3000,rate:30,effect:'現在の状態異常を全解除',description:'猛毒、出血、暗闇、封印などを解除。異常がないターンには発動・消費しない。発動前の継続ダメージは戻せない。'},
- {key:'reraise',name:'リレイズ',kind:'spell',dropRarity:'unset',shop:false,price:null,uses:3000,rate:20,effect:'戦闘中1回だけ致死攻撃から復帰',description:'発動後にHPが0になったとき、一度だけ最大HP30%で復活して状態異常を解除。ねこパンチだけは防げない。ドロップ専用。'},
+ {key:'fire',name:'ファイアー',kind:'spell',dropRarity:'common',price:3600,uses:3000,rate:20,effect:'固定500ダメージ',description:'敵に防御無視の固定500ダメージ。'},
+ {key:'heal',name:'ヒール',kind:'spell',dropRarity:'common',price:2500,uses:3000,rate:20,effect:'HP300回復',description:'自分のHPを最大300回復。'},
+ {key:'beer',name:'ビール',kind:'spell',dropRarity:'common',price:4200,uses:3000,rate:20,effect:'命中率半減・攻撃最終値×1.2',description:'1戦闘に1回だけ発動。その戦闘中は命中率が半分になり、通常攻撃・ジョブスキル・熟練技の最終ダメージが1.2倍。'},
+ {key:'wall',name:'ウォール',kind:'spell',dropRarity:'rare',shop:false,price:null,uses:5000,rate:WALL_MAGIC_RATE,effect:'最大HP分の防御壁・最大HP×3まで重ねがけ',description:'発動時、最大HPと同量のダメージ吸収壁を張る。複数回発動で最大HPの3倍まで蓄積。戦闘が終わると消える。ドロップ専用。'},
+ {key:'cure',name:'キュア',kind:'spell',dropRarity:'uncommon',price:6000,uses:3000,rate:30,effect:'現在の状態異常を全解除',description:'猛毒、出血、暗闇、封印などを解除。異常がないターンには発動・消費しない。発動前の継続ダメージは戻せない。'},
+ {key:'reraise',name:'リレイズ',kind:'spell',dropRarity:'very-rare',shop:false,price:null,uses:3000,rate:20,effect:'戦闘中1回だけ致死攻撃から復帰',description:'発動後にHPが0になったとき、一度だけ最大HP30%で復活して状態異常を解除。ねこパンチだけは防げない。ドロップ専用。'},
  {key:'magic-stone',name:'魔法石',kind:'vessel',price:1400,capacity:2,multiplier:1,description:'最大2種類の魔法を詰められる。発動率は等倍。'},
  {key:'sun-stone',name:'太陽石',kind:'vessel',price:8500,capacity:3,multiplier:3,description:'最大3種類の魔法を詰められる。すべての内包魔法の発動率が3倍。'}
 ];
@@ -754,13 +755,26 @@ function normalizeIsekai(s){
  return s.isekai;
 }
 const isekaiMagicDropDescription='魔法ドロップは基本'+num(ISEKAI_MAGIC_DROP_RATE*100)+'%、トレジャーハンターは'+num(ISEKAI_MAGIC_DROP_RATE*ISEKAI_MAGIC_DROP_TREASURE_MULTIPLIER*100)+'%。';
+function isekaiMagicDropRate(job){
+ return Math.min(1,ISEKAI_MAGIC_DROP_RATE*(job==='treasure_hunter'?ISEKAI_MAGIC_DROP_TREASURE_MULTIPLIER:1));
+}
+function pickIsekaiMagicDrop(roll,pool,weighted=EXPERIMENT_WEIGHTED_ISEKAI_MAGIC_DROPS){
+ if(!weighted)return pool[Math.floor(roll*pool.length)];
+ const weights=pool.map(spell=>ISEKAI_MAGIC_RARITY_WEIGHTS[spell.dropRarity]??1);
+ const total=weights.reduce((sum,weight)=>sum+weight,0);
+ let cumulative=0;
+ return pool.find((spell,index)=>{
+  cumulative+=weights[index];
+  return roll<cumulative/total;
+ });
+}
 function rollIsekaiMagicDrop(){
- if(rand()>=Math.min(1,ISEKAI_MAGIC_DROP_RATE*(state.activeJob==='treasure_hunter'?ISEKAI_MAGIC_DROP_TREASURE_MULTIPLIER:1)))return null;
+ if(rand()>=isekaiMagicDropRate(state.activeJob))return null;
  const pool=ISEKAI_MAGIC_DROP_POOL();if(!pool.length)return null;
- const def=randPick(pool),id='magic-'+state.nextId++;
+ const def=pickIsekaiMagicDrop(rand(),pool),id='magic-'+state.nextId++;
  const spell={id,key:def.key,name:def.name,kind:'spell',uses:ISEKAI_DROP_USES,maxUses:MAGIC_USES_MAX,containerId:null};
  state.magics.push(spell);state.isekai.magicDrops++;markCodexMagic(def.key,'drop');
- return {id,key:def.key,name:def.name,uses:spell.uses,rarity:def.dropRarity||'unset'};
+ return {id,key:def.key,name:def.name,uses:spell.uses,rarity:EXPERIMENT_WEIGHTED_ISEKAI_MAGIC_DROPS?def.dropRarity:'unset'};
 }
 function normalizeForest(s){
  if(!s.forest||typeof s.forest!=='object')s.forest=makeForest();
@@ -2169,7 +2183,7 @@ document.addEventListener('toggle',e=>{
  }
  if(e.target.id==='gearInventory')gearInventoryOpen=e.target.open;if(e.target.id==='advancedJobs')advancedJobsOpen=e.target.open;},true);
 document.addEventListener('change',e=>{if(e.target.id==='gearFilter'){gearFilter=e.target.value;render();}if(e.target.id==='codexFilter'){codexFilter=e.target.value;render();}if(e.target.id==='importFile'){importSave(e.target.files?.[0]);e.target.value='';}});
-window.ABYSS_DEBUG={mainMaxFloor:()=>MAIN_MAX_FLOOR,mainDeepMonsters:()=>structuredClone(MAIN_DEEP_MONSTERS),mainFloors:()=>structuredClone(floors),goMainFloor:n=>setFloor(n),codex:()=>structuredClone(state.codex),codexMonsters:()=>structuredClone(CODEX_MONSTERS),codexMonsterId:(d,n,b,id,floor)=>codexMonsterId(d,n,b,id,floor),codexTab:()=>{uiSection='codex';tab='codex';render();},statusResistance:t=>effectResistance(t),statusItems:()=>structuredClone(STATUS_RESIST_ITEMS),pendingIsekaiBoss:()=>pendingIsekaiBoss()?.name||null,holdIsekaiBoss:()=>holdIsekaiBoss().name,autoStep:()=>runAutoStep(),battleTurnLimit:()=>BATTLE_TURN_LIMIT,peelunaSpawnRate:()=>PEELUNA_SPAWN_RATE,peelunaPunchRate:()=>PEELUNA_PUNCH_RATE,rollIsekaiBoss:()=>rollIsekaiBoss().name,peeluna:()=>structuredClone(PEELUNA_BOSS),isekaiBosses:()=>structuredClone(ISEKAI_BOSSES),isekai:()=>structuredClone(state.isekai),isekaiDropRate:()=>ISEKAI_MAGIC_DROP_RATE,isekaiDropPool:()=>ISEKAI_MAGIC_DROP_POOL().map(({key,name,dropRarity})=>({key,name,dropRarity})),fightIsekai:()=>run(1,true,'isekai'),autoRun:()=>autoSession?{...autoSnapshot(autoSession)}:null,lastAutoRun:()=>structuredClone(state.lastAutoRun||null),stopAutoRun:()=>finishAutoRun('手動停止'),startAutoRun,jobKeys:()=>[...jobKeys],jobMaster:j=>isJobMaster(j),masterPassives:()=>structuredClone(masterPassiveDefinitions),jobGroups:()=>({basic:[...basicJobKeys],intermediate:[...intermediateJobKeys],composite:[...compositeJobKeys],special:[...specialJobKeys],upper:[...upperJobKeys],advanced:[...upperJobKeys]}),canChangeJob:j=>canChangeJob(j),changeJob:j=>changeJob(j),upperUnlockLevel:()=>UPPER_UNLOCK_LEVEL,nonUpperJobKeys:()=>[...nonUpperJobKeys],futureRefineBonus:()=>FUTURE_CRAFT_RATE_MULTIPLIER[state.activeJob]||1,jobActions:()=>jobActionsPerTurn(derived().agi),power:itemId=>{const item=state.inventory.find(i=>i.id===itemId);return item?{...powerValues(item)}:null;},masteryProcRate:slot=>masteryProcRate(slot),state:()=>structuredClone(state),magicCatalog:()=>structuredClone(MAGIC_CATALOG),buyMagic,restoreMagic,infuseMagic,extractMagic,equipMagic,magicProcRate:(key,mult,luk)=>magicProcRate({key},{multiplier:mult},luk),rollMagicTurn:()=>rollMagicTurn(false,derived().luk),mastery:itemId=>{const i=state.inventory.find(x=>x.id===itemId);return i?structuredClone(normalizeMastery(i)):null;},masteryTech:(itemId)=>masteryTechnique(state.inventory.find(x=>x.id===itemId)),gainMastery:()=>{const x=grantBattleMastery();save();render();return x;},stats:()=>derived(),bossRules:()=>({berserkHpRate:BOSS_BERSERK_HP_RATE,berserkAttackMultiplier:BOSS_BERSERK_DAMAGE_MULTIPLIER,paralysisRate:FINAL_BOSS_PARALYSIS_RATE,desperateRate:FINAL_BOSS_DESPERATE_RATE,desperateAccuracy:FINAL_BOSS_DESPERATE_ACCURACY,desperateDamageMultiplier:FINAL_BOSS_DESPERATE_DAMAGE_MULTIPLIER}),jobMasters:()=>Object.fromEntries(jobKeys.map(j=>[j,isJobMaster(j)])),activeMasterPassive:()=>activeMasterPassive(),jobRequirements:()=>structuredClone(jobRequirements),wallGift:()=>structuredClone(WALL_DEV_GIFT),shop:()=>structuredClone(shopCatalog),skills:j=>structuredClone(skills[j||state.activeJob]),reset:resetSave,gainExp:n=>{const r=gainExperience(n);save();render();return r;},setState:s=>{state=prepareSave(structuredClone(s));save();render();},casino:()=>structuredClone(state.casino),forest:()=>structuredClone(state.forest),forestRecords:()=>structuredClone(state.forest.battleRecords||[]),forestBosses:()=>structuredClone(FOREST_BOSSES),forestDrops:()=>structuredClone(FOREST_BOSS_DROP_TABLES),itemDefinitions:()=>structuredClone(ITEM_CATALOG),goForestFloor:n=>setForestFloor(n),fightForest:n=>run(n,isForestBossFloor(state.forest.floor),'forest'),grow:()=>structuredClone(levelGrowth),pokerResult:cards=>pokerResult(cards),rouletteWin:(c,n,p)=>rouletteWin(c,n,p),fight:n=>run(n),rollSkill:()=>rollSkill(),actions:()=>actionsPerTurn(derived().agi)};
+window.ABYSS_DEBUG={mainMaxFloor:()=>MAIN_MAX_FLOOR,mainDeepMonsters:()=>structuredClone(MAIN_DEEP_MONSTERS),mainFloors:()=>structuredClone(floors),goMainFloor:n=>setFloor(n),codex:()=>structuredClone(state.codex),codexMonsters:()=>structuredClone(CODEX_MONSTERS),codexMonsterId:(d,n,b,id,floor)=>codexMonsterId(d,n,b,id,floor),codexTab:()=>{uiSection='codex';tab='codex';render();},statusResistance:t=>effectResistance(t),statusItems:()=>structuredClone(STATUS_RESIST_ITEMS),pendingIsekaiBoss:()=>pendingIsekaiBoss()?.name||null,holdIsekaiBoss:()=>holdIsekaiBoss().name,autoStep:()=>runAutoStep(),battleTurnLimit:()=>BATTLE_TURN_LIMIT,peelunaSpawnRate:()=>PEELUNA_SPAWN_RATE,peelunaPunchRate:()=>PEELUNA_PUNCH_RATE,rollIsekaiBoss:()=>rollIsekaiBoss().name,peeluna:()=>structuredClone(PEELUNA_BOSS),isekaiBosses:()=>structuredClone(ISEKAI_BOSSES),isekai:()=>structuredClone(state.isekai),isekaiDropRate:()=>ISEKAI_MAGIC_DROP_RATE,isekaiDropChance:job=>isekaiMagicDropRate(job),previewIsekaiMagicDrop:(roll,weighted)=>pickIsekaiMagicDrop(roll,ISEKAI_MAGIC_DROP_POOL(),weighted)?.key,isekaiDropPool:()=>ISEKAI_MAGIC_DROP_POOL().map(({key,name,dropRarity})=>({key,name,dropRarity})),fightIsekai:()=>run(1,true,'isekai'),autoRun:()=>autoSession?{...autoSnapshot(autoSession)}:null,lastAutoRun:()=>structuredClone(state.lastAutoRun||null),stopAutoRun:()=>finishAutoRun('手動停止'),startAutoRun,jobKeys:()=>[...jobKeys],jobMaster:j=>isJobMaster(j),masterPassives:()=>structuredClone(masterPassiveDefinitions),jobGroups:()=>({basic:[...basicJobKeys],intermediate:[...intermediateJobKeys],composite:[...compositeJobKeys],special:[...specialJobKeys],upper:[...upperJobKeys],advanced:[...upperJobKeys]}),canChangeJob:j=>canChangeJob(j),changeJob:j=>changeJob(j),upperUnlockLevel:()=>UPPER_UNLOCK_LEVEL,nonUpperJobKeys:()=>[...nonUpperJobKeys],futureRefineBonus:()=>FUTURE_CRAFT_RATE_MULTIPLIER[state.activeJob]||1,jobActions:()=>jobActionsPerTurn(derived().agi),power:itemId=>{const item=state.inventory.find(i=>i.id===itemId);return item?{...powerValues(item)}:null;},masteryProcRate:slot=>masteryProcRate(slot),state:()=>structuredClone(state),magicCatalog:()=>structuredClone(MAGIC_CATALOG),buyMagic,restoreMagic,infuseMagic,extractMagic,equipMagic,magicProcRate:(key,mult,luk)=>magicProcRate({key},{multiplier:mult},luk),rollMagicTurn:()=>rollMagicTurn(false,derived().luk),mastery:itemId=>{const i=state.inventory.find(x=>x.id===itemId);return i?structuredClone(normalizeMastery(i)):null;},masteryTech:(itemId)=>masteryTechnique(state.inventory.find(x=>x.id===itemId)),gainMastery:()=>{const x=grantBattleMastery();save();render();return x;},stats:()=>derived(),bossRules:()=>({berserkHpRate:BOSS_BERSERK_HP_RATE,berserkAttackMultiplier:BOSS_BERSERK_DAMAGE_MULTIPLIER,paralysisRate:FINAL_BOSS_PARALYSIS_RATE,desperateRate:FINAL_BOSS_DESPERATE_RATE,desperateAccuracy:FINAL_BOSS_DESPERATE_ACCURACY,desperateDamageMultiplier:FINAL_BOSS_DESPERATE_DAMAGE_MULTIPLIER}),jobMasters:()=>Object.fromEntries(jobKeys.map(j=>[j,isJobMaster(j)])),activeMasterPassive:()=>activeMasterPassive(),jobRequirements:()=>structuredClone(jobRequirements),wallGift:()=>structuredClone(WALL_DEV_GIFT),shop:()=>structuredClone(shopCatalog),skills:j=>structuredClone(skills[j||state.activeJob]),reset:resetSave,gainExp:n=>{const r=gainExperience(n);save();render();return r;},setState:s=>{state=prepareSave(structuredClone(s));save();render();},casino:()=>structuredClone(state.casino),forest:()=>structuredClone(state.forest),forestRecords:()=>structuredClone(state.forest.battleRecords||[]),forestBosses:()=>structuredClone(FOREST_BOSSES),forestDrops:()=>structuredClone(FOREST_BOSS_DROP_TABLES),itemDefinitions:()=>structuredClone(ITEM_CATALOG),goForestFloor:n=>setForestFloor(n),fightForest:n=>run(n,isForestBossFloor(state.forest.floor),'forest'),grow:()=>structuredClone(levelGrowth),pokerResult:cards=>pokerResult(cards),rouletteWin:(c,n,p)=>rouletteWin(c,n,p),fight:n=>run(n),rollSkill:()=>rollSkill(),actions:()=>actionsPerTurn(derived().agi)};
 render();save();
 })();
 </script>

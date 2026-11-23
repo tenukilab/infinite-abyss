@@ -99,6 +99,8 @@ function boot(storage = new Map(), { rejectReads = false } = {}) {
     growth: window.ABYSS_DEBUG.grow,
     codexMonsters: window.ABYSS_DEBUG.codexMonsters,
     rollIsekaiBoss: window.ABYSS_DEBUG.rollIsekaiBoss,
+    isekaiDropChance: window.ABYSS_DEBUG.isekaiDropChance,
+    previewIsekaiMagicDrop: window.ABYSS_DEBUG.previewIsekaiMagicDrop,
     mainFloors: window.ABYSS_DEBUG.mainFloors,
     masteryProcRate: window.ABYSS_DEBUG.masteryProcRate,
     gainExp: window.ABYSS_DEBUG.gainExp,
@@ -1165,4 +1167,61 @@ test('rare auto-run encounter is saved without fighting and consumed by a manual
   assert.equal(record().sightings, 1);
   assert.equal(record().battles, 1);
   assert.equal(reopened.state().isekai.battleRecords[0].name, '異世界に迷い込んだぴーるな');
+});
+
+test('isekai drop chance is independent from the weighted spell selection', () => {
+  const game = boot();
+  assert.equal(game.isekaiDropChance('mage'), 0.01);
+  assert.equal(game.isekaiDropChance('treasure_hunter'), 0.05);
+
+  const buckets = [
+    [0, 'fire'], [0.21, 'heal'], [0.42, 'beer'], [0.63, 'wall'],
+    [0.75, 'cure'], [0.92, 'reraise'],
+  ];
+  buckets.forEach(([boundary, key], index) => {
+    assert.equal(game.previewIsekaiMagicDrop(boundary), key);
+    if (index !== 0) {
+      assert.equal(game.previewIsekaiMagicDrop(boundary - 1e-9), buckets[index - 1][1]);
+    }
+    assert.equal(game.previewIsekaiMagicDrop((index + 0.5) / buckets.length, false), key);
+  });
+  assert.equal(game.previewIsekaiMagicDrop(1 - 1e-9), 'reraise');
+});
+
+test('weighted drop rewards persist in inventory, battle records and both codex entries', async t => {
+  for (const automated of [false, true]) {
+    await t.test(automated ? 'auto' : 'manual', () => {
+      const save = autoRunSave();
+      const weapon = { id: 'test-weapon', name: 'Test weapon', slot: 'weapon', stat: {}, baseAttack: 200_000_000 };
+      Object.assign(save, { location: 'isekai', level: 1_000_000, rng: 410, inventory: [weapon] });
+      save.equipped.weapon = weapon.id;
+      save.isekai.pendingBossId = 'otherworld-1';
+      equipTestSpell(save, 'heal', 'ヒール', 137);
+      save.equippedMagic = null;
+      const game = bootSaved(save);
+
+      if (automated) {
+        configureAutoRun(game, 1);
+        game.click({ auto: 'start' });
+        game.stepAutoRun();
+      } else {
+        game.click({ isekaifight: '1' });
+      }
+
+      const progress = boot(game.storage).state();
+      assert.equal(progress.isekai.wins, 1);
+      assert.equal(progress.isekai.magicDrops, 1);
+      assert.deepEqual(progress.magics.slice(0, 1), save.magics);
+      const drop = progress.isekai.battleRecords[0].magicDrop;
+      assert.equal(drop.key, 'reraise');
+      assert.equal(drop.id, 'magic-2');
+      assert.equal(drop.rarity, 'very-rare');
+      assert.equal(progress.magics[1].key, drop.key);
+      assert.equal(progress.magics[1].uses, 3000);
+      assert.equal(progress.nextId, 3);
+      assert.equal(progress.codex.magics.reraise.drops, 1);
+      assert.equal(progress.codex.monsters['isekai:otherworld-1'].drops.reraise, 1);
+      if (automated) assert.equal(progress.lastAutoRun.magicFound['リレイズ'], 1);
+    });
+  }
 });
