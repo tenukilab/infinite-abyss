@@ -81,6 +81,7 @@
 /* v0.22: multi-band dungeon navigation supports 50 normal floors without horizontal overflow. */
 .main-bands .btn{white-space:nowrap;min-width:0}.main-grid .floorbtn small{max-height:26px;overflow:hidden;line-height:1.3}
 @media(max-width:375px){.main-bands .btn{font-size:9px;padding:8px 1px}.main-grid .floorbtn{padding:9px 3px}.main-grid .floorbtn b{font-size:12px}}
+.magic-inventory-group{margin:8px 0}.magic-inventory-group>summary{cursor:pointer;padding:10px;border:1px solid #344759;border-radius:10px;font-weight:700}.magic-inventory-group>.itemlist{margin-top:6px}
 </style>
 </head>
 <body>
@@ -152,7 +153,7 @@ const ISEKAI_BOSSES=ISEKAI_ROSTER.map(([name,style,hp,str,specials],i)=>({
 }));
 // Unusual peaceful encounter. One successful hit is enough, but its chance is fixed at 0.001%.
 // The cat normally behaves peacefully; one rare, unavoidable instant-KO neko-punch is possible.
-const PEELUNA_BOSS={id:'otherworld-peeluna',name:'異世界に迷い込んだぴーるな',style:'超低確率の猫・ねこパンチ',hp:1,str:0,mag:0,vit:1,dex:0,agi:0,luk:0,exp:30200000,gold:7400000,passiveCat:true,specials:[]};
+const PEELUNA_BOSS={id:'otherworld-peeluna',name:'異世界に迷い込んだぴーるな',style:'超低確率の猫・ねこパンチ',hp:1,str:0,mag:0,vit:1,dex:0,agi:0,luk:0,exp:1000000000,gold:7400000,passiveCat:true,specials:[]};
 const PEELUNA_ACTIONS=[
  'ゴロゴロ喉を鳴らしている','おててをないないしている','前足でふみふみしている',
  '香箱座りのままこちらを見ている','しっぽの先をぴこぴこ動かしている','眠そうにゆっくりまばたきした',
@@ -162,7 +163,7 @@ const PEELUNA_ACTIONS=[
  'ちょこんと座ってひげを揺らしている','すやすや寝息を立てている'];
 ISEKAI_BOSSES.push(PEELUNA_BOSS);
 // Cat encounter has its own rarity check; the remaining 99.99% are uniform among 25 bosses.
-// Cat reward is ~100 times the NORMAL OTHERWORLD average (302,000 EXP / 74,000 G).
+// The rare encounter has its own fixed base rewards.
 function rollIsekaiBoss(){
  if(rand()<PEELUNA_SPAWN_RATE)return PEELUNA_BOSS;
  return ISEKAI_BOSSES[ri(0,ISEKAI_BOSSES.length-2)];
@@ -1705,11 +1706,24 @@ function shopHTML(kind){const offers=shopCatalog.filter(i=>(i.job===state.active
 function servicesHTML(){const d=derived();const forge=state.inventory.filter(i=>state.equipped[i.slot]===i.id&&i.slot!=='accessory').map(i=>{const n=i.enhance||0,cost=70*(n+1),ore=n>0?n:0;return `<div class="forgerow"><div><strong>${i.name} +${n}</strong><small>${statLine(i.stat)} / ${powerText(i)} / 強化${n>=5?'上限':cost+'G + 鉱石'+ore}</small></div><button class="btn" data-forge="${i.id}" ${n>=5||state.gold<cost||state.ore<ore?'disabled':''}>強化</button></div>`;}).join('');
  return `<section class="panel"><div class="kicker">THE CAMP</div><h2 class="sectiontitle">宿屋・鍛冶屋</h2><div class="towncards"><div class="towncard"><h3>宿屋</h3><p>20GでHP全回復して第1層に戻る。</p><button class="btn primary" data-action="inn" ${state.hp>=d.maxHP||state.gold<20?'disabled':''}>HP全回復 20G</button></div><div class="towncard"><h3>鍛冶屋</h3><p>装備強化+5まで。武器は力／魔力、防具は生命力が増える。試作仕様。</p><span class="small">鉱石：${num(state.ore)}</span></div></div><hr class="divider"><div class="forgeitems">${forge||'<div class="empty">強化できる装備がない</div>'}</div></section>`;
 }
+const openMagicGroups=new Set();
+function magicInventoryHTML(scope,renderItem){
+ const groups=new Map();
+ for(const item of state.magics){
+  const key=scope+':'+item.kind+':'+item.key;
+  if(!groups.has(key))groups.set(key,[]);
+  groups.get(key).push(item);
+ }
+ return [...groups].map(([key,items])=>{
+  if(items.length===1)return renderItem(items[0]);
+  return `<details class="magic-inventory-group" data-magic-group="${esc(key)}" ${openMagicGroups.has(key)?'open':''}><summary>${esc(items[0].name)} ×${num(items.length)}</summary><div class="itemlist">${items.map(renderItem).join('')}</div></details>`;
+ }).join('');
+}
 function magicShopHTML(){
  const active=activeMagicItem();
  const vessels=state.magics.filter(m=>m.kind==='vessel');
  const available=state.magics.filter(m=>m.kind==='spell'&&!m.containerId&&m.uses>=MAGIC_SHOP_MIN_USES);
- const inventory=state.magics.map(item=>{
+ const inventory=magicInventoryHTML('shop',item=>{
   const selected=state.equippedMagic===item.id;
   if(item.kind==='spell'){
    const def=magicDef(item.key),canRestore=item.uses>=MAGIC_SHOP_MIN_USES&&item.uses<MAGIC_SHOP_RESTORE_CAP;
@@ -1719,7 +1733,7 @@ function magicShopHTML(){
   }
   const filled=item.spellIds.map(id=>magicItem(id)).filter(Boolean);
   return `<div class="item ${selected?'equipped':''}"><div><div class="meta">魔法器 · ${item.spellIds.length}/${item.capacity}枠 · 発動率×${item.multiplier}</div><h3>${esc(item.name)}</h3><div class="spec">${filled.length?filled.map(sp=>`${esc(sp.name)} ${num(sp.uses)}回 <button class="btn ghost" data-magicextract="${item.id}|${sp.id}">取り出す</button>`).join(' / '):'魔法なし'}</div></div><div class="itemactions">${selected?'<span class="tag">装備中</span>':`<button class="btn primary" data-magicequip="${item.id}">装備</button>`}</div></div>`;
- }).join('');
+ });
  return `<section class="panel"><div class="kicker">MAGIC SHOP</div><h2 class="sectiontitle">✦ 魔法店</h2><p class="intro">職業制限なし。魔法は1ターンに最大1回だけ発動。器に入った魔法すべてを独立抽選し、複数当たった場合は均等に1つを選ぶ。消費は選ばれた魔法だけ1回。</p>
  <div class="info"><span class="pill gold">所持 ${num(state.gold)}G</span><span class="pill blue">魔法最大 ${num(MAGIC_USES_MAX)}回（店売りは3000回）</span><span class="pill">店での回復上限 3000</span><span class="pill">残り800回以上のみ回復・合成可</span></div>
  <h3 class="sectiontitle" style="margin-top:18px">販売品</h3><div class="itemlist">${MAGIC_CATALOG.filter(def=>def.shop!==false).map(def=>`<div class="item"><div><div class="meta">${def.kind==='spell'?'単体魔法 · 発動率'+def.rate+'% / '+def.uses+'回':'魔法器 · '+def.capacity+'枠 / 発動率×'+def.multiplier}</div><h3>${esc(def.name)}</h3><div class="spec">${esc(def.description)}</div></div><div class="itemactions"><strong style="color:var(--gold)">${num(def.price)}G</strong><button class="btn gold" data-magicbuy="${def.key}" ${state.gold<def.price?'disabled':''}>購入</button></div></div>`).join('')}</div>
@@ -1987,7 +2001,7 @@ function magicOverviewHTML(){const equipped=activeMagicItem();const held=state.m
  return `<section class="panel"><div class="kicker">MAGIC LOADOUT</div><h2 class="sectiontitle">魔法の確認</h2><p class="intro">戦闘中に発動する魔法は1ターン最大1回。現在の装備と残り使用回数を確認できます。</p>
  <div class="gear"><div class="slot">現在の魔法装備</div><div class="name">${esc(equipped?.name||'未装備')}</div><div class="affix">${equipped?.kind==='vessel'?spellListForActive().map(x=>esc(x.name)+' '+num(x.uses)+'回').join(' / ')||'空の魔法器':equipped?.kind==='spell'?num(equipped.uses)+' / '+num(equipped.maxUses)+'回':'魔法装備なし'}</div></div>
  ${state.location==='main'?'<p class="intro">魔法の装備変更・購入・封入・回復は拠点の魔法店から行えます。</p><button class="btn primary" data-action="go-magic-shop">魔法店を開く</button>':'<div class="notice ui-access-note" style="margin-top:12px">ダンジョン滞在中は確認のみ。魔法の装備変更・回復は拠点で行ってください。</div>'}
- <h3 class="sectiontitle" style="margin-top:18px">所持魔法・魔法器（${held.length}個）</h3>${held.length?held.map(m=>`<div class="ui-magic-row"><div><strong>${esc(m.name)}</strong><div class="tiny muted">${m.kind==='spell'?(m.containerId?'魔法器に封入中':'単体魔法'):'魔法器'} ${m.kind==='spell'?num(m.uses)+' / '+num(m.maxUses||MAGIC_USES_MAX)+'回':(m.spellIds||[]).length+' / '+m.capacity+'枠'}</div></div><span class="pill ${state.equippedMagic===m.id?'good':''}">${state.equippedMagic===m.id?'装備中':'所持'}</span></div>`).join(''):'<p class="empty">まだ魔法を所持していません。</p>'}</section>`;
+ <h3 class="sectiontitle" style="margin-top:18px">所持魔法・魔法器（${held.length}個）</h3>${held.length?magicInventoryHTML('overview',m=>`<div class="ui-magic-row"><div><strong>${esc(m.name)}</strong><div class="tiny muted">${m.kind==='spell'?(m.containerId?'魔法器に封入中':'単体魔法'):'魔法器'} ${m.kind==='spell'?num(m.uses)+' / '+num(m.maxUses||MAGIC_USES_MAX)+'回':(m.spellIds||[]).length+' / '+m.capacity+'枠'}</div></div><span class="pill ${state.equippedMagic===m.id?'good':''}">${state.equippedMagic===m.id?'装備中':'所持'}</span></div>`):'<p class="empty">まだ魔法を所持していません。</p>'}</section>`;
 }
 function render(){
  renderSaveNotice();
@@ -2126,7 +2140,13 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||
 });
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&autoSession?.running)finishAutoRun('画面が非表示になったため停止');});
 window.addEventListener('pagehide',()=>{if(autoSession?.running)finishAutoRun('画面を閉じたため停止');});
-document.addEventListener('toggle',e=>{if(e.target.id==='gearInventory')gearInventoryOpen=e.target.open;if(e.target.id==='advancedJobs')advancedJobsOpen=e.target.open;},true);
+document.addEventListener('toggle',e=>{
+ const magicGroup=e.target.dataset?.magicGroup;
+ if(magicGroup&&e.target.isConnected){
+  if(e.target.open)openMagicGroups.add(magicGroup);
+  else openMagicGroups.delete(magicGroup);
+ }
+ if(e.target.id==='gearInventory')gearInventoryOpen=e.target.open;if(e.target.id==='advancedJobs')advancedJobsOpen=e.target.open;},true);
 document.addEventListener('change',e=>{if(e.target.id==='gearFilter'){gearFilter=e.target.value;render();}if(e.target.id==='codexFilter'){codexFilter=e.target.value;render();}if(e.target.id==='importFile'){importSave(e.target.files?.[0]);e.target.value='';}});
 window.ABYSS_DEBUG={mainMaxFloor:()=>MAIN_MAX_FLOOR,mainDeepMonsters:()=>structuredClone(MAIN_DEEP_MONSTERS),mainFloors:()=>structuredClone(floors),goMainFloor:n=>setFloor(n),codex:()=>structuredClone(state.codex),codexMonsters:()=>structuredClone(CODEX_MONSTERS),codexMonsterId:(d,n,b,id)=>codexMonsterId(d,n,b,id),codexTab:()=>{uiSection='codex';tab='codex';render();},statusResistance:t=>effectResistance(t),statusItems:()=>structuredClone(STATUS_RESIST_ITEMS),pendingIsekaiBoss:()=>pendingIsekaiBoss()?.name||null,holdIsekaiBoss:()=>holdIsekaiBoss().name,autoStep:()=>runAutoStep(),battleTurnLimit:()=>BATTLE_TURN_LIMIT,peelunaSpawnRate:()=>PEELUNA_SPAWN_RATE,peelunaPunchRate:()=>PEELUNA_PUNCH_RATE,rollIsekaiBoss:()=>rollIsekaiBoss().name,peeluna:()=>structuredClone(PEELUNA_BOSS),isekaiBosses:()=>structuredClone(ISEKAI_BOSSES),isekai:()=>structuredClone(state.isekai),isekaiDropRate:()=>ISEKAI_MAGIC_DROP_RATE,isekaiDropPool:()=>ISEKAI_MAGIC_DROP_POOL().map(({key,name,dropRarity})=>({key,name,dropRarity})),fightIsekai:()=>run(1,true,'isekai'),autoRun:()=>autoSession?{...autoSnapshot(autoSession)}:null,lastAutoRun:()=>structuredClone(state.lastAutoRun||null),stopAutoRun:()=>finishAutoRun('手動停止'),startAutoRun,jobKeys:()=>[...jobKeys],jobMaster:j=>isJobMaster(j),masterPassives:()=>structuredClone(masterPassiveDefinitions),jobGroups:()=>({basic:[...basicJobKeys],intermediate:[...intermediateJobKeys],composite:[...compositeJobKeys],special:[...specialJobKeys],upper:[...upperJobKeys],advanced:[...upperJobKeys]}),canChangeJob:j=>canChangeJob(j),changeJob:j=>changeJob(j),upperUnlockLevel:()=>UPPER_UNLOCK_LEVEL,nonUpperJobKeys:()=>[...nonUpperJobKeys],futureRefineBonus:()=>FUTURE_CRAFT_RATE_MULTIPLIER[state.activeJob]||1,jobActions:()=>jobActionsPerTurn(derived().agi),power:itemId=>{const item=state.inventory.find(i=>i.id===itemId);return item?{...powerValues(item)}:null;},masteryProcRate:slot=>masteryProcRate(slot),state:()=>structuredClone(state),magicCatalog:()=>structuredClone(MAGIC_CATALOG),buyMagic,restoreMagic,infuseMagic,extractMagic,equipMagic,magicProcRate:(key,mult,luk)=>magicProcRate({key},{multiplier:mult},luk),rollMagicTurn:()=>rollMagicTurn(false,derived().luk),mastery:itemId=>{const i=state.inventory.find(x=>x.id===itemId);return i?structuredClone(normalizeMastery(i)):null;},masteryTech:(itemId)=>masteryTechnique(state.inventory.find(x=>x.id===itemId)),gainMastery:()=>{const x=grantBattleMastery();save();render();return x;},stats:()=>derived(),bossRules:()=>({berserkHpRate:BOSS_BERSERK_HP_RATE,berserkAttackMultiplier:BOSS_BERSERK_DAMAGE_MULTIPLIER,paralysisRate:FINAL_BOSS_PARALYSIS_RATE,desperateRate:FINAL_BOSS_DESPERATE_RATE,desperateAccuracy:FINAL_BOSS_DESPERATE_ACCURACY,desperateDamageMultiplier:FINAL_BOSS_DESPERATE_DAMAGE_MULTIPLIER}),jobMasters:()=>Object.fromEntries(jobKeys.map(j=>[j,isJobMaster(j)])),activeMasterPassive:()=>activeMasterPassive(),jobRequirements:()=>structuredClone(jobRequirements),wallGift:()=>structuredClone(WALL_DEV_GIFT),shop:()=>structuredClone(shopCatalog),skills:j=>structuredClone(skills[j||state.activeJob]),reset:resetSave,gainExp:n=>{const r=gainExperience(n);save();render();return r;},setState:s=>{state=prepareSave(structuredClone(s));save();render();},casino:()=>structuredClone(state.casino),forest:()=>structuredClone(state.forest),forestRecords:()=>structuredClone(state.forest.battleRecords||[]),forestBosses:()=>structuredClone(FOREST_BOSSES),forestDrops:()=>structuredClone(FOREST_BOSS_DROP_TABLES),itemDefinitions:()=>structuredClone(ITEM_CATALOG),goForestFloor:n=>setForestFloor(n),fightForest:n=>run(n,isForestBossFloor(state.forest.floor),'forest'),grow:()=>structuredClone(levelGrowth),pokerResult:cards=>pokerResult(cards),rouletteWin:(c,n,p)=>rouletteWin(c,n,p),fight:n=>run(n),rollSkill:()=>rollSkill(),actions:()=>actionsPerTurn(derived().agi)};
 render();save();
