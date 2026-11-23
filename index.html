@@ -510,9 +510,16 @@ const MAIN_PHASES=[
  ['星影の','星影の回廊','星屑の幻光が古い封印を浮かび上がらせる。'],
  ['虚空の','虚空の最深域','空間の裂け目がひそむ通常迷宮の深奥。']
 ];
+const SPLIT_CODEX_MONSTER='青燐の骸骨兵';
+const RETIRED_CODEX_ID='main:foe:'+SPLIT_CODEX_MONSTER;
+function mainFoeCodexId(name,floor){
+ if(name!==SPLIT_CODEX_MONSTER)return 'main:foe:'+name;
+ // Only a known floor can identify this enemy. Old summary logs did not save it.
+ return floor===2||floor===15?'main:foe:'+floor+':'+name:null;
+}
 const MAIN_DEEP_MONSTERS=MAIN_PHASES.flatMap(([prefix,area,desc],phase)=>
  MAIN_FAMILIES.map(([family,hpFactor,atkFactor],index)=>({
-  id:'main:foe:'+prefix+family,name:prefix+family,phase,family,area,desc,
+  name:prefix+family,phase,family,area,desc,
   hpFactor,atkFactor,variant:index
  }))
 );
@@ -528,7 +535,7 @@ for(let f=MAIN_DEEP_START;f<=MAIN_MAX_FLOOR;f++){
   const atk=Math.round(110*Math.pow(32,depth)*m.atkFactor);
   const exp=Math.round(145*Math.pow(960,depth)*(0.90+m.variant*.01));
   const gold=Math.round(100*Math.pow(340,depth)*(0.92+m.variant*.008));
-  m.floor=f;m.hp=hp;m.atk=atk;m.exp=exp;m.gold=gold;
+  m.id=mainFoeCodexId(m.name,f);m.floor=f;m.hp=hp;m.atk=atk;m.exp=exp;m.gold=gold;
   return [m.name,hp,atk,exp,gold];
  });
  floors[f]={name:phase[1],desc:phase[2],need:3,foes};
@@ -537,10 +544,10 @@ for(let f=MAIN_DEEP_START;f<=MAIN_MAX_FLOOR;f++){
 if(deepCursor!==200||MAIN_DEEP_MONSTERS.length!==200||new Set(MAIN_DEEP_MONSTERS.map(m=>m.id)).size!==200)throw Error('通常迷宮200種の定義数が不一致');
 
 
-// Permanent encyclopedia. Never change existing IDs once saved by a player.
+// Permanent encyclopedia. Keep IDs stable when adding or renaming enemies.
 const CODEX_SCHEMA=1;
 const CODEX_MONSTERS=[
- ...Array.from({length:5},(_,i)=>floors[i+1]).flatMap((f,i)=>f.foes.map(raw=>({id:'main:foe:'+raw[0],group:'main',name:raw[0],kind:'normal',floor:i+1,hp:raw[1],exp:raw[3],gold:raw[4]}))),
+ ...Array.from({length:5},(_,i)=>floors[i+1]).flatMap((f,i)=>f.foes.map(raw=>({id:mainFoeCodexId(raw[0],i+1),group:'main',name:raw[0],kind:'normal',floor:i+1,hp:raw[1],exp:raw[3],gold:raw[4]}))),
  {id:'main:boss',group:'main',name:boss[0],kind:'boss',floor:5,hp:boss[1],exp:boss[3],gold:boss[4]},
  ...MAIN_DEEP_MONSTERS.map(m=>({id:m.id,group:'main',name:m.name,kind:'normal',floor:m.floor,hp:m.hp,exp:m.exp,gold:m.gold})),
  ...FOREST_FOE_NAMES.map(name=>({id:'forest:foe:'+name,group:'forest',name,kind:'normal',hp:null,exp:null,gold:null})),
@@ -548,8 +555,10 @@ const CODEX_MONSTERS=[
  ...ISEKAI_BOSSES.map(e=>({id:'isekai:'+e.id,group:'isekai',name:e.name,kind:'boss',hp:e.hp,exp:e.exp,gold:e.gold,style:e.style,specials:e.specials,passiveCat:!!e.passiveCat}))
 ];
 const CODEX_MONSTER_BY_ID=Object.fromEntries(CODEX_MONSTERS.map(e=>[e.id,e]));
+if(CODEX_MONSTERS.some(e=>!e.id)||Object.keys(CODEX_MONSTER_BY_ID).length!==CODEX_MONSTERS.length)
+ throw Error('モンスター図鑑のIDに不足または重複があります');
 const CODEX_DUNGEON_NAMES={main:'通常迷宮',forest:'魔の森',isekai:'異世界'};
-function codexMonsterId(dungeon,name,isBoss=false,foeId=null){
+function codexMonsterId(dungeon,name,isBoss=false,foeId=null,floor=null){
  if(dungeon==='isekai'){
   const e=foeId?ISEKAI_BOSSES.find(b=>b.id===foeId):ISEKAI_BOSSES.find(b=>b.name===name);
   return e?'isekai:'+e.id:null;
@@ -558,7 +567,7 @@ function codexMonsterId(dungeon,name,isBoss=false,foeId=null){
   if(isBoss){const bossEntry=Object.entries(FOREST_BOSSES).find(([,v])=>v.name===name);return bossEntry?'forest:boss:'+bossEntry[0]:null;}
   return 'forest:foe:'+String(name).replace(/^第\d+階・/,'');
  }
- return isBoss?'main:boss':'main:foe:'+name;
+ return isBoss?'main:boss':mainFoeCodexId(name,floor);
 }
 function newCodex(){return {schema:CODEX_SCHEMA,monsters:{},magics:{},backfilled:false};}
 function newMonsterRecord(){return {sightings:0,battles:0,wins:0,losses:0,retreats:0,firstBattle:null,lastBattle:null,drops:{}};}
@@ -566,7 +575,7 @@ function codexMonsterRecord(c,id){if(!CODEX_MONSTER_BY_ID[id])return null;
  if(!c.monsters[id]||typeof c.monsters[id]!=='object')c.monsters[id]=newMonsterRecord();return c.monsters[id];}
 function codexMagicRecord(c,key){if(!MAGIC_CATALOG.some(m=>m.kind==='spell'&&m.key===key))return null;
  if(!c.magics[key]||typeof c.magics[key]!=='object')c.magics[key]={discovered:false,drops:0,purchases:0};return c.magics[key];}
-function markCodexSighting(foe,dungeon='isekai',isBoss=true){const id=codexMonsterId(dungeon,foe.name,isBoss,foe.id);
+function markCodexSighting(foe,dungeon='isekai',isBoss=true){const id=codexMonsterId(dungeon,foe.name,isBoss,foe.id,foe.floor);
  const entry=codexMonsterRecord(state.codex,id);if(entry)entry.sightings++;
 }
 function markCodexMagic(key,source='other'){
@@ -576,7 +585,7 @@ function markCodexMagic(key,source='other'){
  if(source==='shop')entry.purchases++;
 }
 function markCodexBattle(foe,dungeon,isBoss,outcome,magicDrop=null){
- const id=codexMonsterId(dungeon,foe.name,isBoss,foe.id),entry=codexMonsterRecord(state.codex,id);
+ const id=codexMonsterId(dungeon,foe.name,isBoss,foe.id,foe.floor),entry=codexMonsterRecord(state.codex,id);
  if(entry){
   if(dungeon!=='isekai')entry.sightings++;
   // Isekai sighting was already registered at the roll, even if the player never fights.
@@ -588,7 +597,10 @@ function markCodexBattle(foe,dungeon,isBoss,outcome,magicDrop=null){
  }
 }
 function normalizeCodex(save){
- if(save.codex?.schema===CODEX_SCHEMA&&save.codex.monsters&&save.codex.magics)return save.codex;
+ if(save.codex?.schema===CODEX_SCHEMA&&save.codex.monsters&&save.codex.magics){
+  delete save.codex.monsters[RETIRED_CODEX_ID];
+  return save.codex;
+ }
  const c=newCodex();
  // Only last saved detailed battles are recoverable. Older aggregate kills cannot
  // be attributed to individual monster species, so never fabricate per-species wins.
@@ -2148,7 +2160,7 @@ document.addEventListener('toggle',e=>{
  }
  if(e.target.id==='gearInventory')gearInventoryOpen=e.target.open;if(e.target.id==='advancedJobs')advancedJobsOpen=e.target.open;},true);
 document.addEventListener('change',e=>{if(e.target.id==='gearFilter'){gearFilter=e.target.value;render();}if(e.target.id==='codexFilter'){codexFilter=e.target.value;render();}if(e.target.id==='importFile'){importSave(e.target.files?.[0]);e.target.value='';}});
-window.ABYSS_DEBUG={mainMaxFloor:()=>MAIN_MAX_FLOOR,mainDeepMonsters:()=>structuredClone(MAIN_DEEP_MONSTERS),mainFloors:()=>structuredClone(floors),goMainFloor:n=>setFloor(n),codex:()=>structuredClone(state.codex),codexMonsters:()=>structuredClone(CODEX_MONSTERS),codexMonsterId:(d,n,b,id)=>codexMonsterId(d,n,b,id),codexTab:()=>{uiSection='codex';tab='codex';render();},statusResistance:t=>effectResistance(t),statusItems:()=>structuredClone(STATUS_RESIST_ITEMS),pendingIsekaiBoss:()=>pendingIsekaiBoss()?.name||null,holdIsekaiBoss:()=>holdIsekaiBoss().name,autoStep:()=>runAutoStep(),battleTurnLimit:()=>BATTLE_TURN_LIMIT,peelunaSpawnRate:()=>PEELUNA_SPAWN_RATE,peelunaPunchRate:()=>PEELUNA_PUNCH_RATE,rollIsekaiBoss:()=>rollIsekaiBoss().name,peeluna:()=>structuredClone(PEELUNA_BOSS),isekaiBosses:()=>structuredClone(ISEKAI_BOSSES),isekai:()=>structuredClone(state.isekai),isekaiDropRate:()=>ISEKAI_MAGIC_DROP_RATE,isekaiDropPool:()=>ISEKAI_MAGIC_DROP_POOL().map(({key,name,dropRarity})=>({key,name,dropRarity})),fightIsekai:()=>run(1,true,'isekai'),autoRun:()=>autoSession?{...autoSnapshot(autoSession)}:null,lastAutoRun:()=>structuredClone(state.lastAutoRun||null),stopAutoRun:()=>finishAutoRun('手動停止'),startAutoRun,jobKeys:()=>[...jobKeys],jobMaster:j=>isJobMaster(j),masterPassives:()=>structuredClone(masterPassiveDefinitions),jobGroups:()=>({basic:[...basicJobKeys],intermediate:[...intermediateJobKeys],composite:[...compositeJobKeys],special:[...specialJobKeys],upper:[...upperJobKeys],advanced:[...upperJobKeys]}),canChangeJob:j=>canChangeJob(j),changeJob:j=>changeJob(j),upperUnlockLevel:()=>UPPER_UNLOCK_LEVEL,nonUpperJobKeys:()=>[...nonUpperJobKeys],futureRefineBonus:()=>FUTURE_CRAFT_RATE_MULTIPLIER[state.activeJob]||1,jobActions:()=>jobActionsPerTurn(derived().agi),power:itemId=>{const item=state.inventory.find(i=>i.id===itemId);return item?{...powerValues(item)}:null;},masteryProcRate:slot=>masteryProcRate(slot),state:()=>structuredClone(state),magicCatalog:()=>structuredClone(MAGIC_CATALOG),buyMagic,restoreMagic,infuseMagic,extractMagic,equipMagic,magicProcRate:(key,mult,luk)=>magicProcRate({key},{multiplier:mult},luk),rollMagicTurn:()=>rollMagicTurn(false,derived().luk),mastery:itemId=>{const i=state.inventory.find(x=>x.id===itemId);return i?structuredClone(normalizeMastery(i)):null;},masteryTech:(itemId)=>masteryTechnique(state.inventory.find(x=>x.id===itemId)),gainMastery:()=>{const x=grantBattleMastery();save();render();return x;},stats:()=>derived(),bossRules:()=>({berserkHpRate:BOSS_BERSERK_HP_RATE,berserkAttackMultiplier:BOSS_BERSERK_DAMAGE_MULTIPLIER,paralysisRate:FINAL_BOSS_PARALYSIS_RATE,desperateRate:FINAL_BOSS_DESPERATE_RATE,desperateAccuracy:FINAL_BOSS_DESPERATE_ACCURACY,desperateDamageMultiplier:FINAL_BOSS_DESPERATE_DAMAGE_MULTIPLIER}),jobMasters:()=>Object.fromEntries(jobKeys.map(j=>[j,isJobMaster(j)])),activeMasterPassive:()=>activeMasterPassive(),jobRequirements:()=>structuredClone(jobRequirements),wallGift:()=>structuredClone(WALL_DEV_GIFT),shop:()=>structuredClone(shopCatalog),skills:j=>structuredClone(skills[j||state.activeJob]),reset:resetSave,gainExp:n=>{const r=gainExperience(n);save();render();return r;},setState:s=>{state=prepareSave(structuredClone(s));save();render();},casino:()=>structuredClone(state.casino),forest:()=>structuredClone(state.forest),forestRecords:()=>structuredClone(state.forest.battleRecords||[]),forestBosses:()=>structuredClone(FOREST_BOSSES),forestDrops:()=>structuredClone(FOREST_BOSS_DROP_TABLES),itemDefinitions:()=>structuredClone(ITEM_CATALOG),goForestFloor:n=>setForestFloor(n),fightForest:n=>run(n,isForestBossFloor(state.forest.floor),'forest'),grow:()=>structuredClone(levelGrowth),pokerResult:cards=>pokerResult(cards),rouletteWin:(c,n,p)=>rouletteWin(c,n,p),fight:n=>run(n),rollSkill:()=>rollSkill(),actions:()=>actionsPerTurn(derived().agi)};
+window.ABYSS_DEBUG={mainMaxFloor:()=>MAIN_MAX_FLOOR,mainDeepMonsters:()=>structuredClone(MAIN_DEEP_MONSTERS),mainFloors:()=>structuredClone(floors),goMainFloor:n=>setFloor(n),codex:()=>structuredClone(state.codex),codexMonsters:()=>structuredClone(CODEX_MONSTERS),codexMonsterId:(d,n,b,id,floor)=>codexMonsterId(d,n,b,id,floor),codexTab:()=>{uiSection='codex';tab='codex';render();},statusResistance:t=>effectResistance(t),statusItems:()=>structuredClone(STATUS_RESIST_ITEMS),pendingIsekaiBoss:()=>pendingIsekaiBoss()?.name||null,holdIsekaiBoss:()=>holdIsekaiBoss().name,autoStep:()=>runAutoStep(),battleTurnLimit:()=>BATTLE_TURN_LIMIT,peelunaSpawnRate:()=>PEELUNA_SPAWN_RATE,peelunaPunchRate:()=>PEELUNA_PUNCH_RATE,rollIsekaiBoss:()=>rollIsekaiBoss().name,peeluna:()=>structuredClone(PEELUNA_BOSS),isekaiBosses:()=>structuredClone(ISEKAI_BOSSES),isekai:()=>structuredClone(state.isekai),isekaiDropRate:()=>ISEKAI_MAGIC_DROP_RATE,isekaiDropPool:()=>ISEKAI_MAGIC_DROP_POOL().map(({key,name,dropRarity})=>({key,name,dropRarity})),fightIsekai:()=>run(1,true,'isekai'),autoRun:()=>autoSession?{...autoSnapshot(autoSession)}:null,lastAutoRun:()=>structuredClone(state.lastAutoRun||null),stopAutoRun:()=>finishAutoRun('手動停止'),startAutoRun,jobKeys:()=>[...jobKeys],jobMaster:j=>isJobMaster(j),masterPassives:()=>structuredClone(masterPassiveDefinitions),jobGroups:()=>({basic:[...basicJobKeys],intermediate:[...intermediateJobKeys],composite:[...compositeJobKeys],special:[...specialJobKeys],upper:[...upperJobKeys],advanced:[...upperJobKeys]}),canChangeJob:j=>canChangeJob(j),changeJob:j=>changeJob(j),upperUnlockLevel:()=>UPPER_UNLOCK_LEVEL,nonUpperJobKeys:()=>[...nonUpperJobKeys],futureRefineBonus:()=>FUTURE_CRAFT_RATE_MULTIPLIER[state.activeJob]||1,jobActions:()=>jobActionsPerTurn(derived().agi),power:itemId=>{const item=state.inventory.find(i=>i.id===itemId);return item?{...powerValues(item)}:null;},masteryProcRate:slot=>masteryProcRate(slot),state:()=>structuredClone(state),magicCatalog:()=>structuredClone(MAGIC_CATALOG),buyMagic,restoreMagic,infuseMagic,extractMagic,equipMagic,magicProcRate:(key,mult,luk)=>magicProcRate({key},{multiplier:mult},luk),rollMagicTurn:()=>rollMagicTurn(false,derived().luk),mastery:itemId=>{const i=state.inventory.find(x=>x.id===itemId);return i?structuredClone(normalizeMastery(i)):null;},masteryTech:(itemId)=>masteryTechnique(state.inventory.find(x=>x.id===itemId)),gainMastery:()=>{const x=grantBattleMastery();save();render();return x;},stats:()=>derived(),bossRules:()=>({berserkHpRate:BOSS_BERSERK_HP_RATE,berserkAttackMultiplier:BOSS_BERSERK_DAMAGE_MULTIPLIER,paralysisRate:FINAL_BOSS_PARALYSIS_RATE,desperateRate:FINAL_BOSS_DESPERATE_RATE,desperateAccuracy:FINAL_BOSS_DESPERATE_ACCURACY,desperateDamageMultiplier:FINAL_BOSS_DESPERATE_DAMAGE_MULTIPLIER}),jobMasters:()=>Object.fromEntries(jobKeys.map(j=>[j,isJobMaster(j)])),activeMasterPassive:()=>activeMasterPassive(),jobRequirements:()=>structuredClone(jobRequirements),wallGift:()=>structuredClone(WALL_DEV_GIFT),shop:()=>structuredClone(shopCatalog),skills:j=>structuredClone(skills[j||state.activeJob]),reset:resetSave,gainExp:n=>{const r=gainExperience(n);save();render();return r;},setState:s=>{state=prepareSave(structuredClone(s));save();render();},casino:()=>structuredClone(state.casino),forest:()=>structuredClone(state.forest),forestRecords:()=>structuredClone(state.forest.battleRecords||[]),forestBosses:()=>structuredClone(FOREST_BOSSES),forestDrops:()=>structuredClone(FOREST_BOSS_DROP_TABLES),itemDefinitions:()=>structuredClone(ITEM_CATALOG),goForestFloor:n=>setForestFloor(n),fightForest:n=>run(n,isForestBossFloor(state.forest.floor),'forest'),grow:()=>structuredClone(levelGrowth),pokerResult:cards=>pokerResult(cards),rouletteWin:(c,n,p)=>rouletteWin(c,n,p),fight:n=>run(n),rollSkill:()=>rollSkill(),actions:()=>actionsPerTurn(derived().agi)};
 render();save();
 })();
 </script>
