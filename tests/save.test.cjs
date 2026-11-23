@@ -38,6 +38,7 @@ function boot(storage = new Map(), { rejectReads = false } = {}) {
     if (!elements.has(selector)) {
       elements.set(selector, {
         classList: { add() {}, remove() {} },
+        style: {},
         click() {},
         remove() {},
         scrollIntoView() {},
@@ -67,7 +68,7 @@ function boot(storage = new Map(), { rejectReads = false } = {}) {
       },
       removeItem: key => storage.delete(key),
     },
-    console: { warn() {} },
+    console: { warn() {}, error: (...args) => console.error(...args) },
     FileReader: class {
       readAsText(file) {
         this.result = file;
@@ -98,6 +99,8 @@ function boot(storage = new Map(), { rejectReads = false } = {}) {
     growth: window.ABYSS_DEBUG.grow,
     codexMonsters: window.ABYSS_DEBUG.codexMonsters,
     rollIsekaiBoss: window.ABYSS_DEBUG.rollIsekaiBoss,
+    isekaiDropChance: window.ABYSS_DEBUG.isekaiDropChance,
+    previewIsekaiMagicDrop: window.ABYSS_DEBUG.previewIsekaiMagicDrop,
     mainFloors: window.ABYSS_DEBUG.mainFloors,
     masteryProcRate: window.ABYSS_DEBUG.masteryProcRate,
     gainExp: window.ABYSS_DEBUG.gainExp,
@@ -994,4 +997,340 @@ test('victory logs show the EXP actually awarded by the current job', () => {
   assert.equal(result.win, true);
   assert.equal(result.exp, 37);
   assert.match(state.history[0].body, /EXP\+37 \/ /);
+});
+
+function configureAutoRun(game, target = 3) {
+  game.setInput('#autoMax', String(target));
+  game.setInput('#autoRetreat', '0');
+  game.setChecked('#autoBoss', true);
+}
+
+test('auto-run requires a successful save before starting', async t => {
+  await t.test('storage is full', () => {
+    const game = boot();
+    const bytes = game.storage.get(SAVE_KEY);
+    configureAutoRun(game);
+    game.rejectWrites();
+    game.click({ auto: 'start' });
+    game.stepAutoRun();
+    const progress = game.state();
+    assert.equal(progress.battleCount, 0);
+    assert.equal(progress.autoRunProgress, null);
+    assert.match(game.toast(), /保存/);
+    assert.equal(game.storage.get(SAVE_KEY), bytes);
+  });
+
+  await t.test('unreadable save in recovery', () => {
+    const original = '{broken JSON';
+    const game = boot(new Map([[SAVE_KEY, original]]));
+    configureAutoRun(game);
+    game.click({ auto: 'start' });
+    game.stepAutoRun();
+    assert.equal(game.state().battleCount, 0);
+    assert.equal(game.state().autoRunProgress, null);
+    assert.equal(game.storage.get(SAVE_KEY), original);
+    assert.match(game.toast(), /復旧/);
+  });
+});
+
+test('auto-run stops after the first unsaved battle and keeps the result available for export', async t => {
+  for (const failure of ['storage full', 'other tab']) {
+    await t.test(failure, async () => {
+      const game = bootSaved(autoRunSave());
+      configureAutoRun(game);
+      game.click({ auto: 'start' });
+      game.stepAutoRun();
+      assert.equal(JSON.parse(game.storage.get(SAVE_KEY)).battleCount, 1);
+
+      if (failure === 'storage full') {
+        game.rejectWrites();
+      } else {
+        const other = boot(game.storage);
+        other.click({ fight: '1' });
+        other.click({ fight: '1' });
+      }
+      const bytes = game.storage.get(SAVE_KEY);
+      game.stepAutoRun();
+      game.stepAutoRun();
+      assert.equal(game.storage.get(SAVE_KEY), bytes);
+      const progress = game.state();
+      assert.equal(progress.battleCount, 2);
+      assert.equal(progress.autoRunProgress, null);
+      assert.equal(progress.lastAutoRun.completed, 2);
+      assert.match(progress.lastAutoRun.reason, /保存/);
+
+      game.click({ action: 'export' });
+      const exported = JSON.parse(await game.downloads.at(-1).text()).state;
+      assert.equal(exported.battleCount, 2);
+      assert.equal(exported.xp, progress.xp);
+      assert.equal(exported.gold, progress.gold);
+    });
+  }
+});
+
+function autoRunSave() {
+  const save = currentSave();
+  save.hpGrowth = 40_000;
+  save.hp = 40_000;
+  Object.assign(save.baseStats, { mag: ABILITY_LIMIT, dex: ABILITY_LIMIT });
+  return save;
+}
+
+test('auto-run rejects 1,001 battles and saves exactly 1,000 at the limit', () => {
+  const game = bootSaved(autoRunSave());
+  configureAutoRun(game, 1001);
+  game.click({ auto: 'start' });
+  assert.equal(game.state().autoRunProgress, null);
+
+  configureAutoRun(game, 1000);
+  game.click({ auto: 'start' });
+  for (let step = 0; step < 1001; step++) game.stepAutoRun();
+  const progress = boot(game.storage).state();
+  assert.equal(progress.battleCount, 1000);
+  assert.equal(progress.wins, 1000);
+  assert.equal(progress.lastAutoRun.completed, 1000);
+  assert.equal(progress.lastAutoRun.reason, '周回数の上限に到達');
+  assert.equal(progress.autoRunProgress, null);
+});
+
+test('manual stop and reload retain completed auto-run battles without resuming', async t => {
+  for (const stop of ['manual', 'reload']) {
+    await t.test(stop, () => {
+      const game = bootSaved(autoRunSave());
+      configureAutoRun(game);
+      game.click({ auto: 'start' });
+      game.stepAutoRun();
+
+      if (stop === 'manual') game.click({ auto: 'stop' });
+      const reopened = boot(game.storage);
+      reopened.stepAutoRun();
+      const progress = reopened.state();
+      assert.equal(progress.battleCount, 1);
+      assert.equal(progress.wins, 1);
+      assert.equal(progress.lastAutoRun.completed, 1);
+      assert.equal(progress.autoRunProgress, null);
+      assert.match(progress.lastAutoRun.reason, stop === 'manual' ? /手動停止/ : /再読み込み/);
+    });
+  }
+});
+
+test('auto-run stops at the HP threshold or when the active job reaches MASTER', async t => {
+  await t.test('HP at the exact threshold rejects the start', () => {
+    const save = currentSave();
+    save.hp = 39;
+    const game = bootSaved(save);
+    configureAutoRun(game);
+    game.setInput('#autoRetreat', '50');
+    game.click({ auto: 'start' });
+    game.stepAutoRun();
+    assert.equal(game.state().battleCount, 0);
+    assert.match(game.toast(), /HPが撤退条件/);
+  });
+
+  await t.test('the victory that earns MASTER is the last battle', () => {
+    const save = autoRunSave();
+    save.jobProgress.mage = { level: 59, xp: 8889 };
+    const game = bootSaved(save);
+    configureAutoRun(game);
+    game.setChecked('#autoMaster', true);
+    game.click({ auto: 'start' });
+    game.stepAutoRun();
+    game.stepAutoRun();
+    const progress = boot(game.storage).state();
+    assert.equal(progress.jobProgress.mage.level, 60);
+    assert.equal(progress.battleCount, 1);
+    assert.equal(progress.lastAutoRun.reason, 'ジョブマスター到達');
+  });
+});
+
+test('rare auto-run encounter is saved without fighting and consumed by a manual fight', () => {
+  const save = highLevelBattleSave('guardian', 'isekai');
+  save.rng = 3683737958;
+  const game = bootSaved(save);
+  configureAutoRun(game);
+  game.setChecked('#autoPeeluna', true);
+  game.click({ auto: 'start' });
+  game.stepAutoRun();
+
+  const reopened = boot(game.storage);
+  const id = 'otherworld-peeluna';
+  const record = () => reopened.state().codex.monsters['isekai:' + id];
+  assert.equal(reopened.state().isekai.pendingBossId, id);
+  assert.equal(reopened.state().lastAutoRun.completed, 0);
+  assert.equal(reopened.state().battleCount, 0);
+  assert.equal(record().sightings, 1);
+  assert.equal(record().battles, 0);
+
+  reopened.click({ isekaifight: '1' });
+  assert.equal(reopened.state().isekai.pendingBossId, null);
+  assert.equal(reopened.state().battleCount, 1);
+  assert.equal(record().sightings, 1);
+  assert.equal(record().battles, 1);
+  assert.equal(reopened.state().isekai.battleRecords[0].name, '異世界に迷い込んだぴーるな');
+});
+
+test('isekai drop chance is independent from the weighted spell selection', () => {
+  const game = boot();
+  assert.equal(game.isekaiDropChance('mage'), 0.01);
+  assert.equal(game.isekaiDropChance('treasure_hunter'), 0.05);
+
+  const buckets = [
+    [0, 'fire'], [0.21, 'heal'], [0.42, 'beer'], [0.63, 'wall'],
+    [0.75, 'cure'], [0.92, 'reraise'],
+  ];
+  buckets.forEach(([boundary, key], index) => {
+    assert.equal(game.previewIsekaiMagicDrop(boundary), key);
+    if (index !== 0) {
+      assert.equal(game.previewIsekaiMagicDrop(boundary - 1e-9), buckets[index - 1][1]);
+    }
+    assert.equal(game.previewIsekaiMagicDrop((index + 0.5) / buckets.length, false), key);
+  });
+  assert.equal(game.previewIsekaiMagicDrop(1 - 1e-9), 'reraise');
+});
+
+test('weighted drop rewards persist in inventory, battle records and both codex entries', async t => {
+  for (const automated of [false, true]) {
+    await t.test(automated ? 'auto' : 'manual', () => {
+      const save = autoRunSave();
+      const weapon = { id: 'test-weapon', name: 'Test weapon', slot: 'weapon', stat: {}, baseAttack: 200_000_000 };
+      Object.assign(save, { location: 'isekai', level: 1_000_000, rng: 410, inventory: [weapon] });
+      save.equipped.weapon = weapon.id;
+      save.isekai.pendingBossId = 'otherworld-1';
+      equipTestSpell(save, 'heal', 'ヒール', 137);
+      save.equippedMagic = null;
+      const game = bootSaved(save);
+
+      if (automated) {
+        configureAutoRun(game, 1);
+        game.click({ auto: 'start' });
+        game.stepAutoRun();
+      } else {
+        game.click({ isekaifight: '1' });
+      }
+
+      const progress = boot(game.storage).state();
+      assert.equal(progress.isekai.wins, 1);
+      assert.equal(progress.isekai.magicDrops, 1);
+      assert.deepEqual(progress.magics.slice(0, 1), save.magics);
+      const drop = progress.isekai.battleRecords[0].magicDrop;
+      assert.equal(drop.key, 'reraise');
+      assert.equal(drop.id, 'magic-2');
+      assert.equal(drop.rarity, 'very-rare');
+      assert.equal(progress.magics[1].key, drop.key);
+      assert.equal(progress.magics[1].uses, 3000);
+      assert.equal(progress.nextId, 3);
+      assert.equal(progress.codex.magics.reraise.drops, 1);
+      assert.equal(progress.codex.monsters['isekai:otherworld-1'].drops.reraise, 1);
+      if (automated) assert.equal(progress.lastAutoRun.magicFound['リレイズ'], 1);
+    });
+  }
+});
+
+test('auto-run Gold goals measure this run, and keep the battle that reaches the goal', () => {
+  const save = autoRunSave();
+  save.gold = 1_000_000;
+  const game = bootSaved(save);
+  configureAutoRun(game, 10);
+  game.setInput('#autoGoldGoal', '20');
+  game.click({ auto: 'start' });
+
+  game.stepAutoRun();
+  const first = game.state();
+  assert.equal(first.battleCount, 1);
+  assert.ok(first.autoRunProgress.gold < 20);
+
+  while (game.state().autoRunProgress) game.stepAutoRun();
+  const progress = boot(game.storage).state();
+  assert.ok(progress.battleCount < 10);
+  assert.ok(progress.lastAutoRun.gold >= 20);
+  assert.equal(progress.gold, save.gold + progress.lastAutoRun.gold);
+  assert.equal(progress.lastAutoRun.reason, '獲得Gの目標に到達（20G）');
+});
+
+test('auto-run mastery goals count both equipped items and allow a second target', () => {
+  const save = autoRunSave();
+  save.inventory = [
+    { id: 'test-weapon', name: 'Test weapon', slot: 'weapon', stat: {} },
+    { id: 'test-body', name: 'Test body', slot: 'body', stat: {} },
+  ];
+  Object.assign(save.equipped, { weapon: 'test-weapon', body: 'test-body' });
+  const game = bootSaved(save);
+  configureAutoRun(game);
+  game.setInput('#autoGoldGoal', '99999');
+  game.setInput('#autoMasteryGoal', '2');
+  game.click({ auto: 'start' });
+  game.stepAutoRun();
+  game.stepAutoRun();
+  const progress = boot(game.storage).state();
+  assert.equal(progress.battleCount, 1);
+  assert.ok(progress.inventory.every(item => item.masteryXp >= 1));
+  assert.equal(progress.lastAutoRun.masteryExp, progress.inventory.reduce((sum, item) => sum + item.masteryXp, 0));
+  assert.equal(progress.lastAutoRun.reason, '熟練EXPの目標に到達（2）');
+});
+
+test('auto-run rejects invalid goals and mastery goals with no growable gear', async t => {
+  await t.test('non-integer, negative or unsafe Gold targets', () => {
+    const game = boot();
+    configureAutoRun(game);
+    for (const value of ['2.5', '-10', '9007199254740992']) {
+      game.setInput('#autoGoldGoal', value);
+      game.click({ auto: 'start' });
+      assert.match(game.toast(), /停止目標/);
+      assert.equal(game.state().autoRunProgress, null);
+    }
+  });
+  await t.test('all equipped gear is capped', () => {
+    const save = autoRunSave();
+    save.inventory = [{ id: 'test-weapon', name: 'Test weapon', slot: 'weapon', stat: {}, maxMastery: 1, mastery: 1 }];
+    save.equipped.weapon = 'test-weapon';
+    const game = bootSaved(save);
+    configureAutoRun(game);
+    game.setInput('#autoMasteryGoal', '1');
+    game.click({ auto: 'start' });
+    assert.match(game.toast(), /成長できる/);
+    assert.equal(game.state().autoRunProgress, null);
+  });
+});
+
+test('the last auto-run summary shows where it happened after moving floors and reloading', () => {
+  const save = autoRunSave();
+  save.unlocked = 2;
+  const game = bootSaved(save);
+  configureAutoRun(game, 1);
+  game.click({ auto: 'start' });
+  game.stepAutoRun();
+  game.click({ floor: '2' });
+
+  const reopened = boot(game.storage);
+  const view = reopened.rendered('#view');
+  assert.match(view, /現在：通常迷宮 第2層/);
+  assert.match(view, /前回の自動周回：[^<]+<\/strong><p[^>]+>通常迷宮 第1層/);
+});
+
+test('full-length battle records for both dungeons survive v5 reload and JSON transfer', async () => {
+  const saved = currentSave();
+  saved.battleCount = 60;
+  for (const [location, job] of [['forest', 'guardian'], ['isekai', 'floraflulu']]) {
+    const battle = highLevelBattleSave(job, location);
+    battle.level = 1_000_000;
+    battle.forest.floor = battle.forest.unlocked = 50;
+    battle.isekai.pendingBossId = 'otherworld-1';
+    equipTestSpell(battle, 'wall', 'ウォール', 3000);
+    const { result } = fightFromSave(battle);
+    assert.equal(result.turns.length, 150);
+    const lastId = location === 'forest' ? 30 : 60;
+    saved[location].battleRecords = Array.from({ length: 30 }, (_, index) => ({ ...result, id: lastId - index }));
+  }
+
+  const game = bootSaved(saved);
+  const reopened = boot(game.storage);
+  reopened.click({ action: 'export' });
+  const imported = boot();
+  imported.importText(await reopened.downloads.at(-1).text());
+  assert.match(imported.toast(), /データを復元しました/);
+
+  const restored = boot(imported.storage).state();
+  for (const location of ['forest', 'isekai']) {
+    assert.deepEqual(restored[location].battleRecords, saved[location].battleRecords);
+  }
 });

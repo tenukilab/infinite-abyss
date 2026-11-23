@@ -183,8 +183,9 @@ const STATUS_RESIST_ITEMS=[
 const STATUS_EFFECT_KEYS=['poison','bleed','blind','weaken','slow','healSeal','magicSeal','armorBreak','frail','paralysis'];
 const ISEKAI_STATUS_NAMES={poison:'猛毒',bleed:'出血',blind:'暗闇',weaken:'攻撃弱体',slow:'鈍足',healSeal:'回復封じ',magicSeal:'魔法封印',armorBreak:'防御破壊',frail:'脆弱'};
 const ISEKAI_EFFECT_NAMES={paralysis:'神経麻痺',heavy:'滅殺の一撃',regen:'異界再生',leech:'生命吸収',trueStrike:'魂への直撃',wallCrush:'結界破砕',siphon:'魔法搾取',fury:'異界の怒り'};
-// Rarity is intentionally unassigned today. Uniform selection comes AFTER the 1% success roll.
-// Future rarity weights must be applied only to selection, never to the 1% acquisition roll.
+// Experiment: switch off to restore the original uniform pool without migrating saves.
+const EXPERIMENT_WEIGHTED_ISEKAI_MAGIC_DROPS=true;
+const ISEKAI_MAGIC_RARITY_WEIGHTS={common:21,uncommon:17,rare:12,'very-rare':8};
 const ISEKAI_MAGIC_DROP_POOL=()=>MAGIC_CATALOG.filter(m=>m.kind==='spell');
 const isForestBossFloor=f=>Number.isInteger(f)&&f>=10&&f<=FOREST_MAX_FLOOR&&f%10===0;
 // Mastery is per equipment item, not per slot. EXP needed per mastery level never grows.
@@ -195,12 +196,12 @@ const MASTERY_SLOTS=['weapon','body'];
 // Magic charges are independent from weapon mastery and from jobs.
 const MAGIC_SCHEMA=1, MAGIC_USES_MAX=5000, MAGIC_SHOP_RESTORE_CAP=3000, MAGIC_SHOP_MIN_USES=800;
 const MAGIC_CATALOG=[
- {key:'fire',name:'ファイアー',kind:'spell',dropRarity:'unset',price:3600,uses:3000,rate:20,effect:'固定500ダメージ',description:'敵に防御無視の固定500ダメージ。'},
- {key:'heal',name:'ヒール',kind:'spell',dropRarity:'unset',price:2500,uses:3000,rate:20,effect:'HP300回復',description:'自分のHPを最大300回復。'},
- {key:'beer',name:'ビール',kind:'spell',dropRarity:'unset',price:4200,uses:3000,rate:20,effect:'命中率半減・攻撃最終値×1.2',description:'1戦闘に1回だけ発動。その戦闘中は命中率が半分になり、通常攻撃・ジョブスキル・熟練技の最終ダメージが1.2倍。'},
- {key:'wall',name:'ウォール',kind:'spell',dropRarity:'unset',shop:false,price:null,uses:5000,rate:WALL_MAGIC_RATE,effect:'最大HP分の防御壁・最大HP×3まで重ねがけ',description:'発動時、最大HPと同量のダメージ吸収壁を張る。複数回発動で最大HPの3倍まで蓄積。戦闘が終わると消える。将来のドロップ専用魔法。'},
- {key:'cure',name:'キュア',kind:'spell',dropRarity:'unset',price:6000,uses:3000,rate:30,effect:'現在の状態異常を全解除',description:'猛毒、出血、暗闇、封印などを解除。異常がないターンには発動・消費しない。発動前の継続ダメージは戻せない。'},
- {key:'reraise',name:'リレイズ',kind:'spell',dropRarity:'unset',shop:false,price:null,uses:3000,rate:20,effect:'戦闘中1回だけ致死攻撃から復帰',description:'発動後にHPが0になったとき、一度だけ最大HP30%で復活して状態異常を解除。ねこパンチだけは防げない。ドロップ専用。'},
+ {key:'fire',name:'ファイアー',kind:'spell',dropRarity:'common',price:3600,uses:3000,rate:20,effect:'固定500ダメージ',description:'敵に防御無視の固定500ダメージ。'},
+ {key:'heal',name:'ヒール',kind:'spell',dropRarity:'common',price:2500,uses:3000,rate:20,effect:'HP300回復',description:'自分のHPを最大300回復。'},
+ {key:'beer',name:'ビール',kind:'spell',dropRarity:'common',price:4200,uses:3000,rate:20,effect:'命中率半減・攻撃最終値×1.2',description:'1戦闘に1回だけ発動。その戦闘中は命中率が半分になり、通常攻撃・ジョブスキル・熟練技の最終ダメージが1.2倍。'},
+ {key:'wall',name:'ウォール',kind:'spell',dropRarity:'rare',shop:false,price:null,uses:5000,rate:WALL_MAGIC_RATE,effect:'最大HP分の防御壁・最大HP×3まで重ねがけ',description:'発動時、最大HPと同量のダメージ吸収壁を張る。複数回発動で最大HPの3倍まで蓄積。戦闘が終わると消える。ドロップ専用。'},
+ {key:'cure',name:'キュア',kind:'spell',dropRarity:'uncommon',price:6000,uses:3000,rate:30,effect:'現在の状態異常を全解除',description:'猛毒、出血、暗闇、封印などを解除。異常がないターンには発動・消費しない。発動前の継続ダメージは戻せない。'},
+ {key:'reraise',name:'リレイズ',kind:'spell',dropRarity:'very-rare',shop:false,price:null,uses:3000,rate:20,effect:'戦闘中1回だけ致死攻撃から復帰',description:'発動後にHPが0になったとき、一度だけ最大HP30%で復活して状態異常を解除。ねこパンチだけは防げない。ドロップ専用。'},
  {key:'magic-stone',name:'魔法石',kind:'vessel',price:1400,capacity:2,multiplier:1,description:'最大2種類の魔法を詰められる。発動率は等倍。'},
  {key:'sun-stone',name:'太陽石',kind:'vessel',price:8500,capacity:3,multiplier:3,description:'最大3種類の魔法を詰められる。すべての内包魔法の発動率が3倍。'}
 ];
@@ -754,13 +755,26 @@ function normalizeIsekai(s){
  return s.isekai;
 }
 const isekaiMagicDropDescription='魔法ドロップは基本'+num(ISEKAI_MAGIC_DROP_RATE*100)+'%、トレジャーハンターは'+num(ISEKAI_MAGIC_DROP_RATE*ISEKAI_MAGIC_DROP_TREASURE_MULTIPLIER*100)+'%。';
+function isekaiMagicDropRate(job){
+ return Math.min(1,ISEKAI_MAGIC_DROP_RATE*(job==='treasure_hunter'?ISEKAI_MAGIC_DROP_TREASURE_MULTIPLIER:1));
+}
+function pickIsekaiMagicDrop(roll,pool,weighted=EXPERIMENT_WEIGHTED_ISEKAI_MAGIC_DROPS){
+ if(!weighted)return pool[Math.floor(roll*pool.length)];
+ const weights=pool.map(spell=>ISEKAI_MAGIC_RARITY_WEIGHTS[spell.dropRarity]??1);
+ const total=weights.reduce((sum,weight)=>sum+weight,0);
+ let cumulative=0;
+ return pool.find((spell,index)=>{
+  cumulative+=weights[index];
+  return roll<cumulative/total;
+ });
+}
 function rollIsekaiMagicDrop(){
- if(rand()>=Math.min(1,ISEKAI_MAGIC_DROP_RATE*(state.activeJob==='treasure_hunter'?ISEKAI_MAGIC_DROP_TREASURE_MULTIPLIER:1)))return null;
+ if(rand()>=isekaiMagicDropRate(state.activeJob))return null;
  const pool=ISEKAI_MAGIC_DROP_POOL();if(!pool.length)return null;
- const def=randPick(pool),id='magic-'+state.nextId++;
+ const def=pickIsekaiMagicDrop(rand(),pool),id='magic-'+state.nextId++;
  const spell={id,key:def.key,name:def.name,kind:'spell',uses:ISEKAI_DROP_USES,maxUses:MAGIC_USES_MAX,containerId:null};
  state.magics.push(spell);state.isekai.magicDrops++;markCodexMagic(def.key,'drop');
- return {id,key:def.key,name:def.name,uses:spell.uses,rarity:def.dropRarity||'unset'};
+ return {id,key:def.key,name:def.name,uses:spell.uses,rarity:EXPERIMENT_WEIGHTED_ISEKAI_MAGIC_DROPS?def.dropRarity:'unset'};
 }
 function normalizeForest(s){
  if(!s.forest||typeof s.forest!=='object')s.forest=makeForest();
@@ -969,13 +983,14 @@ function persistSave(candidate,expected){
  saveWriteError='';
 }
 function save(){
- if(saveRecovery)return;
+ if(saveRecovery)return false;
  const previousError=saveWriteError;
  try{persistSave(state,storedSave);}catch(e){
   console.warn('save failed',e);
   saveWriteError='進行を保存できませんでした。画面を閉じる前に、現在の進行をJSONで出力してください。';
  }
  if(saveWriteError!==previousError)renderSaveNotice();
+ return !saveWriteError;
 }
 function rand(){let x=state.rng>>>0||0x12345678;x^=x<<13;x^=x>>>17;x^=x<<5;state.rng=x>>>0;return state.rng/4294967296;}
 function ri(a,b){return a+Math.floor(rand()*(b-a+1));}
@@ -1435,6 +1450,10 @@ function autoSnapshot(a){return {
  masteryExp:a.masteryExp,magicUsed:a.magicUsed,startedAt:a.startedAt,
  lastHP:currentHP(),maxHP:derived().maxHP
 };}
+function autoRunLocationText(dungeon,floor){
+ if(dungeon==='isekai')return '異世界（毎戦ランダムボス）';
+ return dungeon==='forest'?'魔の森 第'+floor+'階':'通常迷宮 第'+floor+'層';
+}
 function autoRunPanelHTML(dungeon){
  const running=autoSession?.running&&autoSession.dungeon===dungeon;
  const session=running?autoSession:null;
@@ -1442,10 +1461,11 @@ function autoRunPanelHTML(dungeon){
  const summary=last?.dungeon===dungeon?last:null;
  const f=dungeon==='isekai'?0:dungeon==='forest'?state.forest.floor:state.floor;
  const isBoss=dungeon==='isekai'?true:dungeon==='forest'?isForestBossFloor(f):f===5&&state.kills[5]>=floors[5].need&&!state.bossDefeated;
- const locationText=dungeon==='isekai'?'異世界（毎戦ランダムボス）':(dungeon==='forest'?'魔の森 第'+f+'階':'通常迷宮 第'+f+'層');
+ const locationText=autoRunLocationText(dungeon,f);
  const rareText=dungeon==='isekai'&&pendingIsekaiBoss()?.passiveCat?'現在「異世界に迷い込んだぴーるな」と遭遇中。手動で挑戦するか、「ぴーるな遭遇時停止」をOFFにして周回を開始できます。':'';
  return `<section class="panel auto-panel" id="auto-run-panel"><div class="kicker">AUTO EXPEDITION</div><h3 class="sectiontitle">⚙ 自動周回</h3>
  <p class="intro">${running?'周回中。職業・装備は固定し、戦闘を1回ずつ処理中。':'現在：'+locationText+'。階層移動・自動宿屋・自動転職はしない。'}</p>
+ ${running&&(session.goldGoal||session.masteryGoal)?`<p class="small muted">停止目標：${[session.goldGoal&&'獲得G '+num(session.goldGoal)+'G',session.masteryGoal&&'熟練EXP '+num(session.masteryGoal)].filter(Boolean).join(' / ')}</p>`:''}
  ${running?`<div class="split"><strong id="auto-count">${num(session.completed)} / ${num(session.target)}戦</strong><span class="pill good" id="auto-status">周回中</span></div>
   <div class="auto-progress" aria-hidden="true"><span id="auto-bar" style="width:${session.completed/session.target*100}%"></span></div>
   <div class="auto-metrics"><div class="metric"><b id="auto-exp">+${num(session.exp)}</b><small>獲得EXP</small></div><div class="metric"><b id="auto-gold">+${num(session.gold)} G</b><small>獲得G</small></div><div class="metric"><b id="auto-mastery">+${num(session.masteryExp)}</b><small>武器・胴 熟練EXP</small></div><div class="metric"><b id="auto-hp">${num(currentHP())} / ${num(derived().maxHP)}</b><small>現在HP</small></div>${dungeon==='isekai'?`<div class="metric"><b id="auto-drops">${num(session.magicDrops)} 個</b><small>魔法ドロップ</small></div>`:''}</div>
@@ -1455,10 +1475,18 @@ function autoRunPanelHTML(dungeon){
   <label class="auto-check"><input type="checkbox" id="autoDefeat" checked disabled>敗北・150ターン時間切れで停止（固定）</label>
   <label class="auto-check"><input type="checkbox" id="autoBoss" checked>ボスの再戦周回を許可</label>
   ${dungeon==='isekai'?`<label class="auto-check"><input type="checkbox" id="autoPeeluna" checked>ぴーるな遭遇時に停止（遭遇を保存して手動挑戦できる）</label>`:''}
+  <details>
+   <summary class="small muted">獲得G・熟練EXPで停止</summary>
+   <p class="hint">今回の周回で先に達した目標で停止します。空欄または0は無効です。</p>
+   <div class="auto-config">
+    <label class="auto-field">獲得Gの目標<input id="autoGoldGoal" type="number" min="0" step="1" inputmode="numeric"></label>
+    <label class="auto-field">武器・胴の熟練EXP合計の目標<input id="autoMasteryGoal" type="number" min="0" step="1" inputmode="numeric"></label>
+   </div>
+  </details>
   ${rareText?`<div class="notice" style="margin-top:10px">${esc(rareText)}</div>`:''}
-  <p class="hint">${dungeon==='isekai'?'異世界は毎戦ボスを再抽選。通常25体と0.01%のぴーるな。勝利時の'+isekaiMagicDropDescription:isBoss?'この階ではボス戦を周回。通常迷宮のボスは再戦できないため、討伐後に停止。':'通常の敵と戦闘。'} <strong>150ターン撤退でも即停止。</strong> 1戦ごとに保存。iPhoneの画面を閉じている間は進みません。</p>
+  <p class="hint">${dungeon==='isekai'?'異世界は毎戦ボスを再抽選。通常25体と0.01%のぴーるな。勝利時の'+isekaiMagicDropDescription:isBoss?'この階ではボス戦を周回。通常迷宮のボスは再戦できないため、討伐後に停止。':'通常の敵と戦闘。'} 150ターン撤退・保存エラーで停止。iPhoneの画面を閉じている間は進みません。</p>
   <button class="btn primary" data-auto="start" style="width:100%">▶ 自動周回を開始</button>`}
- ${!running&&summary?`<hr class="divider"><strong class="small">前回の自動周回：${esc(summary.reason||'終了')}</strong><p class="small muted">${esc(locationText)} / ${num(summary.completed)} / ${num(summary.target)}戦 / EXP+${num(summary.exp)} / ${num(summary.gold)}G / 熟練EXP+${num(summary.masteryExp)}${dungeon==='isekai'?' / 魔法ドロップ '+num(summary.magicDrops||0)+'個':''}</p>${dungeon==='isekai'&&summary.magicFound&&Object.keys(summary.magicFound).length?`<p class="small muted">獲得魔法：${Object.entries(summary.magicFound).map(([name,n])=>esc(name)+' ×'+num(n)).join(' / ')}</p>`:''}`:''}
+ ${!running&&summary?`<hr class="divider"><strong class="small">前回の自動周回：${esc(summary.reason||'終了')}</strong><p class="small muted">${esc(autoRunLocationText(summary.dungeon,summary.floor))} / ${num(summary.completed)} / ${num(summary.target)}戦 / EXP+${num(summary.exp)} / ${num(summary.gold)}G / 熟練EXP+${num(summary.masteryExp)}${dungeon==='isekai'?' / 魔法ドロップ '+num(summary.magicDrops||0)+'個':''}</p>${dungeon==='isekai'&&summary.magicFound&&Object.keys(summary.magicFound).length?`<p class="small muted">獲得魔法：${Object.entries(summary.magicFound).map(([name,n])=>esc(name)+' ×'+num(n)).join(' / ')}</p>`:''}`:''}
  </section>`;
 }
 function refreshAutoPanel(){const a=autoSession;if(!a?.running)return;
@@ -1466,12 +1494,14 @@ function refreshAutoPanel(){const a=autoSession;if(!a?.running)return;
  for(const [id,value] of Object.entries(values)){const el=document.getElementById(id);if(el)el.textContent=value;}
  const meter=document.getElementById('auto-bar');if(meter)meter.style.width=(a.completed/a.target*100)+'%';
 }
-function finishAutoRun(reason){const a=autoSession;if(!a?.running)return;
+function finishAutoRun(reason,{persist=true}={}){const a=autoSession;if(!a?.running)return;
  a.running=false;clearTimeout(a.timer);
  const summary={...autoSnapshot(a),status:'stopped',reason};
  state.autoRunProgress=null;state.lastAutoRun=summary;
  logEntry('自動周回終了：'+reason,(a.dungeon==='isekai'?'異世界':a.dungeon==='forest'?'魔の森 第'+a.floor+'階':'通常迷宮 第'+a.floor+'層')+' / '+a.completed+'/'+a.target+'戦 / EXP+'+a.exp+' / '+a.gold+'G / 熟練EXP+'+a.masteryExp+(a.dungeon==='isekai'?' / 魔法ドロップ '+a.magicDrops+'個':''));
- autoSession=null;save();render();toast('自動周回終了：'+reason);
+ autoSession=null;
+ if(persist)save();
+ render();toast('自動周回終了：'+reason);
 }
 function runAutoStep(){const a=autoSession;if(!a?.running)return;
  // Check again before scheduling a new fight, including browser lifecycle safety.
@@ -1484,8 +1514,7 @@ function runAutoStep(){const a=autoSession;if(!a?.running)return;
    preselected=holdIsekaiBoss();
    if(preselected.passiveCat&&a.stopOnPeeluna){
     a.rareEncounters++;
-    // Persist the encounter before stopping; the next manual battle uses THIS cat.
-    state.autoRunProgress=autoSnapshot(a);save();
+    // The final save includes this encounter for the next manual battle.
     finishAutoRun('異世界に迷い込んだぴーるなに遭遇（戦闘前に停止）');return;
    }
    if(preselected.passiveCat)a.rareEncounters++;
@@ -1504,32 +1533,48 @@ function runAutoStep(){const a=autoSession;if(!a?.running)return;
    state.forest.battleRecords.unshift({id:state.battleCount,floor:a.floor,isBoss:a.isBoss,name:result.name,win:result.win,retreated:!!result.retreated,rounds:result.rounds,damage:result.damage,heal:result.heal,exp:result.exp,gold:result.gold,turns:result.turnLogs||[]});
    if(state.forest.battleRecords.length>FOREST_RECORD_LIMIT)state.forest.battleRecords.length=FOREST_RECORD_LIMIT;
   }
-  // Always persist exactly this battle BEFORE considering the next one.
-  state.autoRunProgress=autoSnapshot(a);save();
+  state.autoRunProgress=autoSnapshot(a);
+  if(!save()){finishAutoRun('保存できなかったため停止',{persist:false});return;}
   if(a.completed%AUTO_DRAW_EVERY===0){renderHero();refreshAutoPanel();}
   if(!result.win){finishAutoRun(result.retreated?'150ターン時間切れ・撤退':'敗北（即停止）');return;}
   if(a.stopAtMaster&&isJobMaster(a.job)){finishAutoRun('ジョブマスター到達');return;}
   if(currentHP()<=derived().maxHP*a.retreatPercent/100){finishAutoRun('HP'+a.retreatPercent+'%以下で撤退');return;}
   if(a.isBoss&&a.dungeon==='main'){finishAutoRun('通常迷宮のボス討伐（再戦不可）');return;}
+  if(a.goldGoal&&a.gold>=a.goldGoal){finishAutoRun('獲得Gの目標に到達（'+num(a.goldGoal)+'G）');return;}
+  if(a.masteryGoal&&a.masteryExp>=a.masteryGoal){finishAutoRun('熟練EXPの目標に到達（'+num(a.masteryGoal)+'）');return;}
   if(a.completed>=a.target){finishAutoRun('周回数の上限に到達');return;}
   a.timer=setTimeout(runAutoStep,AUTO_TICK_MS);
  }catch(err){console.error('auto expedition error',err);finishAutoRun('処理エラーで停止');}
 }
 function startAutoRun(){
  if(autoSession?.running){toast('すでに自動周回中');return;}
+ if(saveRecovery){toast('セーブを復旧してから自動周回を開始してください');return;}
  const dungeon=state.location==='isekai'?'isekai':state.location==='forest'?'forest':state.location==='main'&&tab==='explore'?'main':null;
  if(!dungeon){toast('迷宮探索・魔の森・異世界で開始してください');return;}
  const target=Number($('#autoMax')?.value),retreatPercent=Number($('#autoRetreat')?.value);
  if(!Number.isInteger(target)||target<1||target>AUTO_LIMIT){toast('周回数は1～1000戦で指定してください');return;}
  if(!Number.isInteger(retreatPercent)||retreatPercent<0||retreatPercent>100){toast('撤退HPは0～100%で指定してください');return;}
+ const goldGoal=Number($('#autoGoldGoal')?.value??''),masteryGoal=Number($('#autoMasteryGoal')?.value??'');
+ if(!isCount(goldGoal)||!isCount(masteryGoal)){toast('停止目標は0以上の整数で指定してください');return;}
+ if(masteryGoal&&!MASTERY_SLOTS.some(slot=>{
+  const item=equippedMastery(slot);
+  return item&&item.mastery<item.maxMastery;
+ })){
+  toast('熟練EXPを目標にするには成長できる武器か胴装備が必要です');return;
+ }
  const stopAtMaster=!!$('#autoMaster')?.checked,bossAllowed=!!$('#autoBoss')?.checked,stopOnPeeluna=dungeon==='isekai'&&!!$('#autoPeeluna')?.checked;
  const floor=dungeon==='isekai'?0:dungeon==='forest'?state.forest.floor:state.floor;
  const isBoss=dungeon==='isekai'?true:dungeon==='forest'?isForestBossFloor(floor):floor===5&&state.kills[5]>=floors[5].need&&!state.bossDefeated&&bossAllowed;
  if(isBoss&&!bossAllowed){toast('ボス戦を周回するにはボス許可を有効にしてください');return;}
  if(stopAtMaster&&isJobMaster(state.activeJob)){toast('現在のジョブはすでにMASTERです。停止設定を変更してください');return;}
  if(currentHP()<=derived().maxHP*retreatPercent/100){toast('HPが撤退条件に達しています。回復してから開始してください');return;}
- autoSession={running:true,dungeon,floor,isBoss,job:state.activeJob,target,completed:0,retreatPercent,stopAtMaster,bossAllowed,stopOnPeeluna,exp:0,gold:0,ore:0,levelUps:0,jobUps:0,masteryExp:0,magicUsed:0,magicDrops:0,magicFound:{},rareEncounters:0,startedAt:new Date().toISOString(),timer:null};
- state.autoRunProgress=autoSnapshot(autoSession);lastResult=null;save();render();
+ autoSession={running:true,dungeon,floor,isBoss,job:state.activeJob,target,completed:0,retreatPercent,stopAtMaster,goldGoal,masteryGoal,bossAllowed,stopOnPeeluna,exp:0,gold:0,ore:0,levelUps:0,jobUps:0,masteryExp:0,magicUsed:0,magicDrops:0,magicFound:{},rareEncounters:0,startedAt:new Date().toISOString(),timer:null};
+ state.autoRunProgress=autoSnapshot(autoSession);
+ if(!save()){
+  autoSession=null;state.autoRunProgress=null;
+  toast('保存できなかったため自動周回を開始できません');return;
+ }
+ lastResult=null;render();
  autoSession.timer=setTimeout(runAutoStep,AUTO_TICK_MS);
 }
 function run(count,isBoss=false,dungeon='main'){
@@ -2161,7 +2206,7 @@ document.addEventListener('toggle',e=>{
  }
  if(e.target.id==='gearInventory')gearInventoryOpen=e.target.open;if(e.target.id==='advancedJobs')advancedJobsOpen=e.target.open;},true);
 document.addEventListener('change',e=>{if(e.target.id==='gearFilter'){gearFilter=e.target.value;render();}if(e.target.id==='codexFilter'){codexFilter=e.target.value;render();}if(e.target.id==='importFile'){importSave(e.target.files?.[0]);e.target.value='';}});
-window.ABYSS_DEBUG={mainMaxFloor:()=>MAIN_MAX_FLOOR,mainDeepMonsters:()=>structuredClone(MAIN_DEEP_MONSTERS),mainFloors:()=>structuredClone(floors),goMainFloor:n=>setFloor(n),codex:()=>structuredClone(state.codex),codexMonsters:()=>structuredClone(CODEX_MONSTERS),codexMonsterId:(d,n,b,id,floor)=>codexMonsterId(d,n,b,id,floor),codexTab:()=>{uiSection='codex';tab='codex';render();},statusResistance:t=>effectResistance(t),statusItems:()=>structuredClone(STATUS_RESIST_ITEMS),pendingIsekaiBoss:()=>pendingIsekaiBoss()?.name||null,holdIsekaiBoss:()=>holdIsekaiBoss().name,autoStep:()=>runAutoStep(),battleTurnLimit:()=>BATTLE_TURN_LIMIT,peelunaSpawnRate:()=>PEELUNA_SPAWN_RATE,peelunaPunchRate:()=>PEELUNA_PUNCH_RATE,rollIsekaiBoss:()=>rollIsekaiBoss().name,peeluna:()=>structuredClone(PEELUNA_BOSS),isekaiBosses:()=>structuredClone(ISEKAI_BOSSES),isekai:()=>structuredClone(state.isekai),isekaiDropRate:()=>ISEKAI_MAGIC_DROP_RATE,isekaiDropPool:()=>ISEKAI_MAGIC_DROP_POOL().map(({key,name,dropRarity})=>({key,name,dropRarity})),fightIsekai:()=>run(1,true,'isekai'),autoRun:()=>autoSession?{...autoSnapshot(autoSession)}:null,lastAutoRun:()=>structuredClone(state.lastAutoRun||null),stopAutoRun:()=>finishAutoRun('手動停止'),startAutoRun,jobKeys:()=>[...jobKeys],jobMaster:j=>isJobMaster(j),masterPassives:()=>structuredClone(masterPassiveDefinitions),jobGroups:()=>({basic:[...basicJobKeys],intermediate:[...intermediateJobKeys],composite:[...compositeJobKeys],special:[...specialJobKeys],upper:[...upperJobKeys],advanced:[...upperJobKeys]}),canChangeJob:j=>canChangeJob(j),changeJob:j=>changeJob(j),upperUnlockLevel:()=>UPPER_UNLOCK_LEVEL,nonUpperJobKeys:()=>[...nonUpperJobKeys],futureRefineBonus:()=>FUTURE_CRAFT_RATE_MULTIPLIER[state.activeJob]||1,jobActions:()=>jobActionsPerTurn(derived().agi),power:itemId=>{const item=state.inventory.find(i=>i.id===itemId);return item?{...powerValues(item)}:null;},masteryProcRate:slot=>masteryProcRate(slot),state:()=>structuredClone(state),magicCatalog:()=>structuredClone(MAGIC_CATALOG),buyMagic,restoreMagic,infuseMagic,extractMagic,equipMagic,magicProcRate:(key,mult,luk)=>magicProcRate({key},{multiplier:mult},luk),rollMagicTurn:()=>rollMagicTurn(false,derived().luk),mastery:itemId=>{const i=state.inventory.find(x=>x.id===itemId);return i?structuredClone(normalizeMastery(i)):null;},masteryTech:(itemId)=>masteryTechnique(state.inventory.find(x=>x.id===itemId)),gainMastery:()=>{const x=grantBattleMastery();save();render();return x;},stats:()=>derived(),bossRules:()=>({berserkHpRate:BOSS_BERSERK_HP_RATE,berserkAttackMultiplier:BOSS_BERSERK_DAMAGE_MULTIPLIER,paralysisRate:FINAL_BOSS_PARALYSIS_RATE,desperateRate:FINAL_BOSS_DESPERATE_RATE,desperateAccuracy:FINAL_BOSS_DESPERATE_ACCURACY,desperateDamageMultiplier:FINAL_BOSS_DESPERATE_DAMAGE_MULTIPLIER}),jobMasters:()=>Object.fromEntries(jobKeys.map(j=>[j,isJobMaster(j)])),activeMasterPassive:()=>activeMasterPassive(),jobRequirements:()=>structuredClone(jobRequirements),wallGift:()=>structuredClone(WALL_DEV_GIFT),shop:()=>structuredClone(shopCatalog),skills:j=>structuredClone(skills[j||state.activeJob]),reset:resetSave,gainExp:n=>{const r=gainExperience(n);save();render();return r;},setState:s=>{state=prepareSave(structuredClone(s));save();render();},casino:()=>structuredClone(state.casino),forest:()=>structuredClone(state.forest),forestRecords:()=>structuredClone(state.forest.battleRecords||[]),forestBosses:()=>structuredClone(FOREST_BOSSES),forestDrops:()=>structuredClone(FOREST_BOSS_DROP_TABLES),itemDefinitions:()=>structuredClone(ITEM_CATALOG),goForestFloor:n=>setForestFloor(n),fightForest:n=>run(n,isForestBossFloor(state.forest.floor),'forest'),grow:()=>structuredClone(levelGrowth),pokerResult:cards=>pokerResult(cards),rouletteWin:(c,n,p)=>rouletteWin(c,n,p),fight:n=>run(n),rollSkill:()=>rollSkill(),actions:()=>actionsPerTurn(derived().agi)};
+window.ABYSS_DEBUG={mainMaxFloor:()=>MAIN_MAX_FLOOR,mainDeepMonsters:()=>structuredClone(MAIN_DEEP_MONSTERS),mainFloors:()=>structuredClone(floors),goMainFloor:n=>setFloor(n),codex:()=>structuredClone(state.codex),codexMonsters:()=>structuredClone(CODEX_MONSTERS),codexMonsterId:(d,n,b,id,floor)=>codexMonsterId(d,n,b,id,floor),codexTab:()=>{uiSection='codex';tab='codex';render();},statusResistance:t=>effectResistance(t),statusItems:()=>structuredClone(STATUS_RESIST_ITEMS),pendingIsekaiBoss:()=>pendingIsekaiBoss()?.name||null,holdIsekaiBoss:()=>holdIsekaiBoss().name,autoStep:()=>runAutoStep(),battleTurnLimit:()=>BATTLE_TURN_LIMIT,peelunaSpawnRate:()=>PEELUNA_SPAWN_RATE,peelunaPunchRate:()=>PEELUNA_PUNCH_RATE,rollIsekaiBoss:()=>rollIsekaiBoss().name,peeluna:()=>structuredClone(PEELUNA_BOSS),isekaiBosses:()=>structuredClone(ISEKAI_BOSSES),isekai:()=>structuredClone(state.isekai),isekaiDropRate:()=>ISEKAI_MAGIC_DROP_RATE,isekaiDropChance:job=>isekaiMagicDropRate(job),previewIsekaiMagicDrop:(roll,weighted)=>pickIsekaiMagicDrop(roll,ISEKAI_MAGIC_DROP_POOL(),weighted)?.key,isekaiDropPool:()=>ISEKAI_MAGIC_DROP_POOL().map(({key,name,dropRarity})=>({key,name,dropRarity})),fightIsekai:()=>run(1,true,'isekai'),autoRun:()=>autoSession?{...autoSnapshot(autoSession)}:null,lastAutoRun:()=>structuredClone(state.lastAutoRun||null),stopAutoRun:()=>finishAutoRun('手動停止'),startAutoRun,jobKeys:()=>[...jobKeys],jobMaster:j=>isJobMaster(j),masterPassives:()=>structuredClone(masterPassiveDefinitions),jobGroups:()=>({basic:[...basicJobKeys],intermediate:[...intermediateJobKeys],composite:[...compositeJobKeys],special:[...specialJobKeys],upper:[...upperJobKeys],advanced:[...upperJobKeys]}),canChangeJob:j=>canChangeJob(j),changeJob:j=>changeJob(j),upperUnlockLevel:()=>UPPER_UNLOCK_LEVEL,nonUpperJobKeys:()=>[...nonUpperJobKeys],futureRefineBonus:()=>FUTURE_CRAFT_RATE_MULTIPLIER[state.activeJob]||1,jobActions:()=>jobActionsPerTurn(derived().agi),power:itemId=>{const item=state.inventory.find(i=>i.id===itemId);return item?{...powerValues(item)}:null;},masteryProcRate:slot=>masteryProcRate(slot),state:()=>structuredClone(state),magicCatalog:()=>structuredClone(MAGIC_CATALOG),buyMagic,restoreMagic,infuseMagic,extractMagic,equipMagic,magicProcRate:(key,mult,luk)=>magicProcRate({key},{multiplier:mult},luk),rollMagicTurn:()=>rollMagicTurn(false,derived().luk),mastery:itemId=>{const i=state.inventory.find(x=>x.id===itemId);return i?structuredClone(normalizeMastery(i)):null;},masteryTech:(itemId)=>masteryTechnique(state.inventory.find(x=>x.id===itemId)),gainMastery:()=>{const x=grantBattleMastery();save();render();return x;},stats:()=>derived(),bossRules:()=>({berserkHpRate:BOSS_BERSERK_HP_RATE,berserkAttackMultiplier:BOSS_BERSERK_DAMAGE_MULTIPLIER,paralysisRate:FINAL_BOSS_PARALYSIS_RATE,desperateRate:FINAL_BOSS_DESPERATE_RATE,desperateAccuracy:FINAL_BOSS_DESPERATE_ACCURACY,desperateDamageMultiplier:FINAL_BOSS_DESPERATE_DAMAGE_MULTIPLIER}),jobMasters:()=>Object.fromEntries(jobKeys.map(j=>[j,isJobMaster(j)])),activeMasterPassive:()=>activeMasterPassive(),jobRequirements:()=>structuredClone(jobRequirements),wallGift:()=>structuredClone(WALL_DEV_GIFT),shop:()=>structuredClone(shopCatalog),skills:j=>structuredClone(skills[j||state.activeJob]),reset:resetSave,gainExp:n=>{const r=gainExperience(n);save();render();return r;},setState:s=>{state=prepareSave(structuredClone(s));save();render();},casino:()=>structuredClone(state.casino),forest:()=>structuredClone(state.forest),forestRecords:()=>structuredClone(state.forest.battleRecords||[]),forestBosses:()=>structuredClone(FOREST_BOSSES),forestDrops:()=>structuredClone(FOREST_BOSS_DROP_TABLES),itemDefinitions:()=>structuredClone(ITEM_CATALOG),goForestFloor:n=>setForestFloor(n),fightForest:n=>run(n,isForestBossFloor(state.forest.floor),'forest'),grow:()=>structuredClone(levelGrowth),pokerResult:cards=>pokerResult(cards),rouletteWin:(c,n,p)=>rouletteWin(c,n,p),fight:n=>run(n),rollSkill:()=>rollSkill(),actions:()=>actionsPerTurn(derived().agi)};
 render();save();
 })();
 </script>
