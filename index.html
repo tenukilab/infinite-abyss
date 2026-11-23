@@ -714,9 +714,10 @@ function createState(){return {version:VERSION,activeJob:'mage',level:1,xp:0,hpG
 function makeCasino(){return {poker:null,last:'',plays:0,purchased:[],materials:[]};}
 function makeForest(){return {floor:1,unlocked:1,kills:{},bossesDefeated:{},battleRecords:[]};}
 function makeIsekai(){return {wins:0,losses:0,retreats:0,encounters:0,battleRecords:[],magicDrops:0,pendingBossId:null};}
+const ISEKAI_COUNTERS=['wins','losses','retreats','encounters','magicDrops'];
 function normalizeIsekai(s){
  if(!s.isekai||typeof s.isekai!=='object')s.isekai=makeIsekai();
- for(const key of ['wins','losses','retreats','encounters','magicDrops']){
+ for(const key of ISEKAI_COUNTERS){
   if(!Number.isInteger(s.isekai[key])||s.isekai[key]<0)s.isekai[key]=0;
  }
  if(!ISEKAI_BOSSES.some(b=>b.id===s.isekai.pendingBossId))s.isekai.pendingBossId=null;
@@ -835,6 +836,7 @@ const isCount=value=>Number.isSafeInteger(value)&&value>=0;
 const isId=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]+$/.test(value);
 const isReference=value=>value===null||isId(value);
 const isCountMap=value=>isRecord(value)&&Object.values(value).every(isCount);
+const isOptionalCount=value=>value===undefined||isCount(value);
 function validBattleRecord(record){
  if(!isRecord(record)||!isCount(record.id))return false;
  if(record.turns===undefined)return true;
@@ -852,6 +854,10 @@ function validSavedPoker(poker){
 }
 function prepareSave(s){
  if(!isRecord(s)||s.version!==VERSION)throw Error('対応するセーブ形式は version 5 です');
+ const schemas={masterySchema:MASTERY_SCHEMA,equipmentPowerSchema:EQUIPMENT_POWER_SCHEMA,
+   magicSchema:MAGIC_SCHEMA,wallGiftSchema:WALL_GIFT_SCHEMA};
+ if(!Object.entries(schemas).every(([key,version])=>s[key]===undefined||s[key]===version))
+  throw Error('装備または魔法のセーブ形式に対応していません');
  const counts=['xp','hpGrowth','hp','gold','ore','wins','deaths','battleCount','rng','nextId'];
  if(!Object.hasOwn(jobs,s.activeJob)||!isCount(s.level)||s.level<1||!counts.every(k=>isCount(s[k]))||
     !isRecord(s.equipped)||!slots.slice(0,-1).every(k=>isReference(s.equipped[k]))||
@@ -877,13 +883,25 @@ function prepareSave(s){
     (!Array.isArray(data.battleRecords)||!data.battleRecords.every(validBattleRecord))))
    throw Error('戦闘記録のデータが不正です');
  }
- if(s.forest?.kills!==undefined&&!isCountMap(s.forest.kills))throw Error('魔の森の進行データが不正です');
+ const forest=s.forest;
+ const bossFlags=forest?.bossesDefeated;
+ if(!isOptionalCount(forest?.floor)||!isOptionalCount(forest?.unlocked)||
+    (forest?.kills!==undefined&&!isCountMap(forest.kills))||
+    (bossFlags!==undefined&&(!isRecord(bossFlags)||!Object.values(bossFlags).every(value=>typeof value==='boolean'))))
+  throw Error('魔の森の進行データが不正です');
+ const pendingBoss=s.isekai?.pendingBossId;
+ if(!ISEKAI_COUNTERS.every(key=>isOptionalCount(s.isekai?.[key]))||
+    (pendingBoss!=null&&!ISEKAI_BOSSES.some(boss=>boss.id===pendingBoss)))
+  throw Error('異世界の進行データが不正です');
  if(s.codex!==undefined&&(!isRecord(s.codex)||s.codex.schema!==CODEX_SCHEMA||!isRecord(s.codex.monsters)||!isRecord(s.codex.magics)||
    !Object.values(s.codex.monsters).every(r=>isRecord(r)&&isRecord(r.drops)&&isCount(r.sightings)&&isCount(r.battles)&&
      isCount(r.wins)&&isCount(r.losses)&&isCount(r.retreats))||!Object.values(s.codex.magics).every(isRecord)))
   throw Error('図鑑のデータが不正です');
- if(s.casino!==undefined&&(!isRecord(s.casino)||!validSavedPoker(s.casino.poker)))
+ if(!isOptionalCount(s.medals)||(s.casino!==undefined&&(!isRecord(s.casino)||!validSavedPoker(s.casino.poker)||
+    !isOptionalCount(s.casino.plays)||!['purchased','materials'].every(key=>
+      s.casino[key]===undefined||(Array.isArray(s.casino[key])&&s.casino[key].every(isId))))))
   throw Error('カジノのデータが不正です');
+ if(s.equippedMagic!=null&&!s.magics?.some(m=>m.id===s.equippedMagic))throw Error('装備中の魔法が不正です');
  upgradeState(s);
  if(!slots.every(k=>isReference(s.equipped[k]))||!isReference(s.equippedMagic))throw Error('装備中のアイテムが不正です');
  return s;

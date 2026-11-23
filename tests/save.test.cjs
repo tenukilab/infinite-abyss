@@ -203,6 +203,58 @@ test('a failed or cancelled import preserves the active state and previous bytes
   }
 });
 
+test('malformed progress leaves startup and import data intact', async t => {
+  const samples = [
+    ['forest boss map', 'forest', 'bossesDefeated', '{"10":true}'],
+    ['forest boss flag', 'forest', 'bossesDefeated', { 10: 'true' }],
+    ['forest unlock count', 'forest', 'unlocked', '12'],
+    ['otherworld win count', 'isekai', 'wins', '4'],
+    ['otherworld pending encounter', 'isekai', 'pendingBossId', 1],
+    ['medals', null, 'medals', '76'],
+    ['casino purchase history', 'casino', 'purchased', '["relic-mage"]'],
+    ['casino materials', 'casino', 'materials', { 'rust-origin': true }],
+    ['equipped magic', null, 'equippedMagic', 20],
+    ['missing equipped spell', null, 'equippedMagic', 'magic-999'],
+    ['unknown mastery format', null, 'masterySchema', 2],
+  ];
+
+  for (const [label, section, field, value] of samples) {
+    await t.test(label, () => {
+      const badSave = structuredClone(legacySave);
+      const progress = section ? badSave[section] : badSave;
+      progress[field] = value;
+      const bytes = JSON.stringify(badSave);
+
+      const recovery = boot(new Map([[SAVE_KEY, bytes]]));
+      assert.equal(recovery.saveNotice().hidden, false);
+      assert.equal(recovery.storage.get(SAVE_KEY), bytes);
+
+      const game = boot(new Map([[SAVE_KEY, legacyBytes]]));
+      const priorState = game.state();
+      const priorBytes = game.storage.get(SAVE_KEY);
+      game.importText(bytes);
+      assert.equal(game.confirmations(), 0);
+      assert.deepEqual(game.state(), priorState);
+      assert.equal(game.storage.get(SAVE_KEY), priorBytes);
+    });
+  }
+});
+
+test('missing optional dungeon progress in older v5 saves can be filled', () => {
+  const incomplete = structuredClone(legacySave);
+  delete incomplete.forest.bossesDefeated;
+  delete incomplete.isekai.retreats;
+  delete incomplete.isekai.pendingBossId;
+
+  const game = boot(new Map([[SAVE_KEY, JSON.stringify(incomplete)]]));
+  assert.equal(game.saveNotice().hidden, true);
+  assert.deepEqual(game.state().forest.bossesDefeated, {});
+  assert.equal(game.state().isekai.retreats, 0);
+  assert.equal(game.state().isekai.pendingBossId, null);
+  assert.deepEqual(game.state().forest.kills, legacySave.forest.kills);
+  assert.equal(game.state().isekai.wins, legacySave.isekai.wins);
+});
+
 test('old v5 data survives migration, reload, and a JSON export/import round trip', async () => {
   const storage = new Map([[SAVE_KEY, legacyBytes]]);
   const game = boot(storage);
